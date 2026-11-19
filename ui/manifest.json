@@ -1,9 +1,9 @@
 {
- "version": "2.4.0",
+ "version": "2.4.1",
  "minShell": "2.1.0",
- "note": "Claude kan nu ändra mina påminnelser direkt, och jag säger till här när det händer.",
+ "note": "Fönstret stannar nu kvar efter att du skrivit något. Vill du ha tillbaka att det göms automatiskt finns det under inställningar.",
  "files": {
-  "index.html": "5f0294fbbf6bb5a20922a68b8ebd6ae0f84c77b5aee00c1897c16ae1c8f23601",
+  "index.html": "6fe8c74bb92cb3528d22da540e88ee1dc280e375542e56786b29c58782d05071",
   "popup.html": "a5fc253fa317621f7fafbf368dcb7a5a9836f154a8c8fd75248c4f2aad77bead",
   "build/icon.png": "7a1c43186a98bde4d4e1beb8cfe0595ac72845720665e4db9bf2ee7d2ace6305"
  },
@@ -11,6 +11,6 @@
   "version": "2.3.1",
   "url": "https://raw.githubusercontent.com/576F3154/jarvis/main/shell/Jarvis-2.3.1-portable.exe",
   "sha256": "5eb2a96d3ad616826840e3ea96dd4f49759dc228a7bcf5b4f1425b5e9faf5338",
-  "note": "Claude kan nu ändra mina påminnelser direkt, och jag säger till här när det händer."
+  "note": "Fönstret stannar nu kvar efter att du skrivit något. Vill du ha tillbaka att det göms automatiskt finns det under inställningar."
  }
 }

@@ -232,6 +232,7 @@ details summary::-webkit-details-marker{display:none}
   <label><input type="checkbox" id="optSound"> Ljud vid påminnelse</label>
   <label><input type="checkbox" id="optVoice"> Jarvis läser upp påminnelser (Windows röst)</label>
   <label id="autoRow"><input type="checkbox" id="optAuto"> Starta med Windows</label>
+  <label><input type="checkbox" id="optQuickHide"> Göm fönstret automatiskt efter Enter när det öppnats med snabbkommandot</label>
   <label id="hkRow">Snabbkommando för att öppna Jarvis <button class="chip" id="hkBtn" style="font-family:var(--mono)">Ctrl+Mellanslag</button></label>
   <label>Jarvis kallar dig <input type="text" id="optAddr" maxlength="24" placeholder="inget tilltal"></label>
   <label><input type="checkbox" id="optBrief"> Morgonbriefing i popup kl <input type="time" id="optBriefTime" value="07:30"></label>
@@ -676,7 +677,7 @@ function snooze(i, ts) {
 $('addForm').onsubmit = (e) => {
   e.preventDefault(); const v = $('q').value.trim(); if (!v) return;
   userSaid(v); handle(v); $('q').value = ''; $('preview').innerHTML = '';
-  if (bridge && fromHotkey) { fromHotkey = false; setTimeout(() => bridge.hide(), 1400); }
+  if (bridge && fromHotkey && state.settings.quickHide) { fromHotkey = false; setTimeout(() => bridge.hide(), 1400); }
 };
 const CMD = /^(sök|hitta|leta|var är|var ligger|briefing|morgonrapport|veckan|vecka|nästa vecka|veckovy|visa |hej|hallå|hejsan|tjena|tja|tjenare|morrn|god\s|yo\b|vad har jag|vad ska jag|vad händer|läget|status|översikt|hur ser|dagens|briefing|tack|vem är du|vad är du|vad kan du|vad heter du|hjälp|klar\s|klart\s|fixat\s|gjort\s|avbocka|bocka av|done\s|ta bort|radera|stryk|skjut upp|flytta|senarelägg|uppdater|sök efter uppdatering|vilken version|version$)/i;
 $('q').oninput = () => {
@@ -740,7 +741,7 @@ document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey && e.key.toLowerCase() === 'k') || (e.key === '/' && !typing)) { e.preventDefault(); $('q').focus(); $('q').select(); }
   if (e.key === 'Escape') {
     $('menu').hidden = true; document.querySelectorAll('.panel.open').forEach(p => p.classList.remove('open'));
-    if (document.activeElement === $('q')) { $('q').value = ''; $('preview').innerHTML = ''; if (bridge && fromHotkey) { fromHotkey = false; bridge.hide(); } }
+    if (document.activeElement === $('q')) { $('q').value = ''; $('preview').innerHTML = ''; if (bridge && fromHotkey && state.settings.quickHide) { fromHotkey = false; bridge.hide(); } }
   }
 });
 if (bridge) bridge.onQuickAdd(() => { fromHotkey = true; [0, 100, 300].forEach(ms => setTimeout(() => { if (document.activeElement !== $('q')) { $('q').focus(); $('q').select(); } }, ms)); });
@@ -950,6 +951,7 @@ function bindSettings() {
   $('optSound').onchange = (e) => { st.sound = e.target.checked; save(); if (e.target.checked) chime(); };
   $('optPopup').onchange = (e) => { st.popup = e.target.checked; save(); try { if (!st.popup && Notification.permission === 'default') Notification.requestPermission(); } catch {} };
   $('optVoice').onchange = (e) => { st.voice = e.target.checked; save(); if (st.voice) speak(fill('Röstmodul aktiverad, {a}.')); };
+  $('optQuickHide').checked = !!st.quickHide; $('optQuickHide').onchange = (e) => { st.quickHide = e.target.checked; save(); };
   $('optBrief').checked = st.brief !== false; $('optBriefTime').value = st.briefTime || '07:30';
   $('optBrief').onchange = (e) => { st.brief = e.target.checked; save(); };
   $('optBriefTime').onchange = (e) => { st.briefTime = e.target.value || '07:30'; save(); say(fill('Morgonbriefing ställd till ' + st.briefTime + ', {a}.')); };
