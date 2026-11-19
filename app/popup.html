@@ -101,6 +101,22 @@ $('list').addEventListener('click', (e) => {
 $('x').onclick = () => window.pop.dismiss();
 $('open').onclick = () => window.pop.act('-', 'open');
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.pop.dismiss(); });
+
+/* Ctrl+Shift (bara de två, ingen annan tangent) stänger rutan */
+(() => {
+  let armed = false, other = false;
+  const isMod = (k) => k === 'Control' || k === 'Shift';
+  document.addEventListener('keydown', (e) => {
+    if (isMod(e.key)) { if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey && !other) armed = true; }
+    else { other = true; armed = false; }
+  }, true);
+  document.addEventListener('keyup', (e) => {
+    if (!isMod(e.key)) return;
+    if (armed && !other) { armed = false; window.pop.dismiss(); }
+    if (!e.ctrlKey && !e.shiftKey) { armed = false; other = false; }
+  }, true);
+  window.addEventListener('blur', () => { armed = false; other = false; });
+})();
 new ResizeObserver(() => window.pop.size(document.body.scrollHeight + 4)).observe($('frame'));
 </script>
 </body>

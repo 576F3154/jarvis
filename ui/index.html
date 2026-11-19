@@ -219,6 +219,7 @@ details summary::-webkit-details-marker{display:none}
     <tr><td class="hkLbl">Ctrl+Mellanslag</td><td>Öppna från var som helst, skriv, Enter, tillbaka till jobbet</td></tr>
     <tr><td>Ctrl+K eller /</td><td>Hoppa till fältet</td></tr>
     <tr><td>Dubbelklick</td><td>Ändra en påminnelse</td></tr>
+    <tr><td>Ctrl+Shift</td><td>Stänger Jarvis eller popupen (bara de två tangenterna)</td></tr>
     <tr><td>Esc</td><td>Stäng / dölj</td></tr>
   </table>
 </div></div>
@@ -967,6 +968,22 @@ function bindSettings() {
   state.settings.lastGreet = new Date().toDateString(); save();
   tick(); setInterval(tick, 10000);
   $('q').focus();
+})();
+
+/* Ctrl+Shift (bara de två, ingen annan tangent) stänger rutan */
+(() => {
+  let armed = false, other = false;
+  const isMod = (k) => k === 'Control' || k === 'Shift';
+  document.addEventListener('keydown', (e) => {
+    if (isMod(e.key)) { if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey && !other) armed = true; }
+    else { other = true; armed = false; }
+  }, true);
+  document.addEventListener('keyup', (e) => {
+    if (!isMod(e.key)) return;
+    if (armed && !other) { armed = false; if (bridge && !/^Tryck/.test($('hkBtn').textContent)) { document.querySelectorAll('.panel.open').forEach(p => p.classList.remove('open')); bridge.hide(); }; }
+    if (!e.ctrlKey && !e.shiftKey) { armed = false; other = false; }
+  }, true);
+  window.addEventListener('blur', () => { armed = false; other = false; });
 })();
 window.__parse = parse; window.__state = () => state; window.__tick = tick; window.__handle = handle;
 </script>

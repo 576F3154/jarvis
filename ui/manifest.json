@@ -1,16 +1,16 @@
 {
- "version": "2.3.1",
+ "version": "2.3.2",
  "minShell": "2.1.0",
- "note": "Snabbkommandot går att byta under inställningar.",
+ "note": "Ctrl+Shift stänger nu rutan när Jarvis eller popupen är aktiv.",
  "files": {
-  "index.html": "3c7332126e7a0b8437545029ab53e4184cf439665ea5f4eb3286db1f6c069965",
-  "popup.html": "7e75c8efd7979cb840e9f31863ecd4f3a18dc4300127232336030268144a9122",
+  "index.html": "c233775bc57a4b760ed26c95745428513f680b2f31a044eb6d5933cd155dde5f",
+  "popup.html": "a5fc253fa317621f7fafbf368dcb7a5a9836f154a8c8fd75248c4f2aad77bead",
   "build/icon.png": "7a1c43186a98bde4d4e1beb8cfe0595ac72845720665e4db9bf2ee7d2ace6305"
  },
  "shell": {
   "version": "2.3.0",
   "url": "https://raw.githubusercontent.com/576F3154/jarvis/main/shell/Jarvis-2.3.0-portable.exe",
   "sha256": "7c1131ec76e2b1c90adc35fcd5fbfaf14a49be246fc2846b8424494d3e9d004f",
-  "note": "Snabbkommandot går att byta under inställningar."
+  "note": "Ctrl+Shift stänger nu rutan när Jarvis eller popupen är aktiv."
  }
 }
