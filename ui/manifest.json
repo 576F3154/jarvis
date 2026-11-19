@@ -1,9 +1,9 @@
 {
- "version": "2.2.0",
+ "version": "2.2.1",
  "minShell": "2.1.0",
- "note": "Morgonbriefing kl 07:30, kundmärkning med filter och en veckovy. Skriv hjälp för de nya kommandona.",
+ "note": "Inget mer sir. Och jag kollar nu efter uppdateringar var tionde minut och varje gång du öppnar mig.",
  "files": {
-  "index.html": "fc23ee8d4a9255d39a70346e0776ec139aca4876c997816423eaa4b69851df96",
+  "index.html": "db220865568875d6281dc0489139ecc6ddba4c95b59520c36cc1cef9510118ed",
   "popup.html": "7e75c8efd7979cb840e9f31863ecd4f3a18dc4300127232336030268144a9122",
   "build/icon.png": "7a1c43186a98bde4d4e1beb8cfe0595ac72845720665e4db9bf2ee7d2ace6305"
  }

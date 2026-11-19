@@ -230,7 +230,7 @@ details summary::-webkit-details-marker{display:none}
   <label><input type="checkbox" id="optSound"> Ljud vid påminnelse</label>
   <label><input type="checkbox" id="optVoice"> Jarvis läser upp påminnelser (Windows röst)</label>
   <label id="autoRow"><input type="checkbox" id="optAuto"> Starta med Windows</label>
-  <label>Jarvis kallar dig <input type="text" id="optAddr" maxlength="24" placeholder="sir"></label>
+  <label>Jarvis kallar dig <input type="text" id="optAddr" maxlength="24" placeholder="inget tilltal"></label>
   <label><input type="checkbox" id="optBrief"> Morgonbriefing i popup kl <input type="time" id="optBriefTime" value="07:30"></label>
   <p style="margin:14px 0 6px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)">Kunder &amp; leverantörer (en per rad)</p>
   <textarea id="optCust" spellcheck="false"></textarea>
@@ -242,6 +242,7 @@ details summary::-webkit-details-marker{display:none}
   <button class="chip" id="testPop">Testa popup</button>
   <p style="margin:14px 0 6px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)">Version</p>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span id="verTxt" style="font-family:var(--mono);font-size:12.5px;color:var(--muted)">–</span><button class="chip" id="updBtn">Sök efter uppdatering</button></div>
+  <label><input type="checkbox" id="optAutoUpd"> Uppdatera automatiskt (kollar var 10:e minut)</label>
   <input type="file" id="importFile" accept="application/json" hidden>
 </div></div>
 
@@ -250,7 +251,7 @@ details summary::-webkit-details-marker{display:none}
 /* ---------- Lagring (samma fil och format som Kom ihåg) ---------- */
 const bridge = window.api || null;
 const KEY = 'komihag.v1';
-let state = { items: [], settings: { sound: true, popup: true, voice: false, address: 'sir' }, chat: [] };
+let state = { items: [], settings: { sound: true, popup: true, voice: false, address: '' }, chat: [] };
 let filter = 'all', saveT;
 
 async function load() {
@@ -382,11 +383,15 @@ const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;
 
 /* ---------- Jarvis personlighet ---------- */
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
-const A = () => (state.settings.address || 'sir').trim() || 'sir';
-const fill = (s, v = {}) => s.replace(/\{(\w+)\}/g, (_, k) => k === 'a' ? A() : (v[k] ?? ''));
+const A = () => (state.settings.address || '').trim();
+// Utan tilltal plockas {a} bort snyggt: "Klart, {a}." -> "Klart.", "{a}, du har" -> "Du har", "Hej {a}." -> "Hej."
+const fill = (s, v = {}) => {
+  if (!A()) s = s.replace(/,\s*\{a\}/g, '').replace(/(^|[.!?]\s+)\{a\},\s*(\S)/g, (_, p, c) => p + c.toUpperCase()).replace(/\s*\{a\}/g, '');
+  return s.replace(/\{(\w+)\}/g, (_, k) => k === 'a' ? A() : (v[k] ?? ''));
+};
 const L = {
   added: ['Noterat. Jag påminner dig {when}.', 'Klart, {a}. Det ligger i systemet till {when}.', 'Sparat till {when}. Jag glömmer inte, det är liksom hela min grej.',
-          'Registrerat. {when}, jag knackar på.', 'Uppfattat, {a}. {when} hör du av mig.', 'Inlagt till {when}. Du kan släppa det ur huvudet nu.'],
+          'Registrerat. {when}, jag knackar på.', 'Uppfattat, {a}. Jag hör av mig {when}.', 'Inlagt till {when}. Du kan släppa det ur huvudet nu.'],
   addedDl: ['Stopptid {when}, {a}. Jag varnar dig 15 minuter innan, så du hinner.', 'Noterat med stopptid {when}. Förvarning kommer 15 min innan.'],
   addedNone: ['Noterat utan tid. Det ligger under "Utan tid" tills du bestämmer dig.', 'Sparat, {a}. Ingen tid angiven, så jag håller det framme åt dig.'],
   addedImp: [' Markerat som viktigt. Jag kommer inte vara diskret om det här.', ' Viktigt, uppfattat.'],
@@ -826,7 +831,7 @@ async function showVersion() {
   const v = await bridge.versions(); $('verTxt').textContent = 'Jarvis ' + v.ui + ' · motor ' + v.shell; return v;
 }
 async function checkForUpdate() {
-  if (!bridge || !bridge.checkUpdate) { say('Uppdateringar fungerar bara i Windows-appen, {a}.'.replace('{a}', A())); return; }
+  if (!bridge || !bridge.checkUpdate) { say(fill('Uppdateringar fungerar bara i Windows-appen, {a}.')); return; }
   say(fill('Kontrollerar om det finns något nytt, {a}…'));
   const r = await bridge.checkUpdate();
   if (r.status === 'latest') say(fill('Du kör senaste versionen, ' + r.version + '. Inget att hämta.'));
@@ -847,6 +852,12 @@ if (bridge && bridge.onUpdateReady) {
     applyWhenIdle();
   });
   bridge.onCheckNow(() => checkForUpdate());
+  // Tyst automatisk koll: var 10:e minut och när fönstret visas (högst var 3:e minut)
+  let lastAuto = Date.now();
+  const autoCheck = () => { if (state.settings.autoUpdate === false || Date.now() - lastAuto < 3 * 6e4) return; lastAuto = Date.now(); bridge.checkUpdate().catch(() => {}); };
+  setInterval(() => { lastAuto = 0; autoCheck(); }, 10 * 6e4);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) autoCheck(); });
+  window.addEventListener('focus', autoCheck);
 }
 
 /* ---------- Paneler & inställningar ---------- */
@@ -865,7 +876,7 @@ function bindSettings() {
   $('optBriefTime').onchange = (e) => { st.briefTime = e.target.value || '07:30'; save(); say(fill('Morgonbriefing ställd till ' + st.briefTime + ', {a}.')); };
   $('optCust').value = (Array.isArray(st.customers) ? st.customers : DEFAULT_CUSTOMERS).join('\n');
   $('optCust').onchange = (e) => { st.customers = e.target.value.split('\n').map(x => x.trim()).filter(Boolean); save(); render(); say('Kundlistan uppdaterad. ' + st.customers.length + ' namn bevakas.'); };
-  $('optAddr').onchange = (e) => { st.address = e.target.value.trim() || 'sir'; save(); say(fill('Uppfattat. Från och med nu är du {a}.')); };
+  $('optAddr').onchange = (e) => { st.address = e.target.value.trim(); save(); say(st.address ? fill('Uppfattat. Från och med nu är du {a}.') : 'Uppfattat. Inget tilltal från och med nu.'); };
   if (bridge) { bridge.getAutostart().then(v => $('optAuto').checked = v); $('optAuto').onchange = (e) => bridge.setAutostart(e.target.checked); }
   else $('autoRow').style.display = 'none';
   $('exportBtn').onclick = () => {
@@ -877,6 +888,8 @@ function bindSettings() {
     try { const d = JSON.parse(await e.target.files[0].text()); if (Array.isArray(d.items)) { state.items = d.items; save(); render(); say('Importerat ' + d.items.length + ' påminnelser. Allt på plats.'); } } catch { toast('Kunde inte läsa filen'); }
   };
   $('clearDone').onclick = () => { const n = state.items.filter(i => i.done).length; state.items = state.items.filter(i => !i.done); save(); render(); say('Rensade ' + n + ' avklarade. Rent och snyggt.'); };
+  $('optAutoUpd').checked = state.settings.autoUpdate !== false;
+  $('optAutoUpd').onchange = (e) => { state.settings.autoUpdate = e.target.checked; save(); say(e.target.checked ? 'Automatiska uppdateringar på.' : 'Automatiska uppdateringar av. Skriv "uppdatera" när du vill kolla själv.'); };
   $('updBtn').onclick = () => { $('setPanel').classList.remove('open'); checkForUpdate(); };
   showVersion();
   $('testPop').onclick = () => {
@@ -886,7 +899,9 @@ function bindSettings() {
 }
 
 (async function init() {
-  await load(); bindSettings();
+  await load();
+  if (!state.settings.addrV2) { if ((state.settings.address || '').toLowerCase() === 'sir') state.settings.address = ''; state.settings.addrV2 = 1; }
+  bindSettings();
   const n = state.items.filter(i => !i.done).length;
   const upd = new URLSearchParams(location.search).get('updated');
   if (upd) {
