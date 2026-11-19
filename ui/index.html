@@ -198,6 +198,7 @@ details summary::-webkit-details-marker{display:none}
     <tr><td>ta bort avokado</td><td>Tar bort (går att ångra)</td></tr>
     <tr><td>briefing</td><td>Dagens läge i popupen. Kommer annars själv kl 07:30</td></tr>
     <tr><td>veckan / nästa vecka</td><td>Veckovy med alla dagar</td></tr>
+    <tr><td>sök rocklunda</td><td>Hittar påminnelser som innehåller ordet, även avklarade</td></tr>
     <tr><td>visa carlsberg</td><td>Allt som rör en kund eller leverantör</td></tr>
     <tr><td>uppdatera</td><td>Kollar om det finns en ny version (görs annars varje timme)</td></tr>
     <tr><td>hej / tack / vem är du</td><td>Artighet kostar ingenting</td></tr>
@@ -289,7 +290,9 @@ function customers() {
   custCache = { key, list }; return list;
 }
 function custOf(i) { const t = (i.title || '') + ' ' + (i.raw || ''); return customers().find(c => c.re.test(t)) || null; }
-const matchF = (i) => filter === 'all' || i.cat === filter || (filter.startsWith('k:') && (custOf(i) || {}).name === filter.slice(2));
+const normS = (t) => String(t || '').toLowerCase();
+const matchF = (i) => filter === 'all' || i.cat === filter || (filter.startsWith('k:') && (custOf(i) || {}).name === filter.slice(2))
+  || (filter.startsWith('q:') && hitQ(i, qWords(filter.slice(2))));
 
 /* ---------- Svensk tidstolk ---------- */
 const B = '(?<![\\p{L}\\d])', E = '(?![\\p{L}\\d])';
@@ -465,6 +468,19 @@ function summary(which = 'today') {
   return parts.join(' ');
 }
 
+/* ---------- Sök ---------- */
+const SEARCH_FILL = new Set(['upp', 'efter', 'påminnelsen', 'påminnelserna', 'påminnelse', 'om', 'med', 'den', 'det', 'min', 'mina', 'till', 'för', 'på', 'i']);
+const qWords = (q) => normS(q).replace(/[^\p{L}\p{N}\s-]/gu, ' ').split(/\s+/).filter(w => w && !SEARCH_FILL.has(w));
+const hitQ = (i, ws) => { const t = normS(i.title + ' ' + (i.raw || '')); return ws.length && ws.every(w => t.includes(w)); };
+function search(q) {
+  const ws = qWords(q); q = ws.join(' ') || q.trim();
+  const hits = state.items.filter(i => hitQ(i, ws)).sort((a, b) => a.done - b.done || (b.due || b.created) - (a.due || a.created));
+  const open = hits.filter(i => !i.done), done = hits.filter(i => i.done);
+  if (!hits.length) { const near = findItem(q, true); say(near ? `Inget som heter exakt "${q}", men närmast är: ${near.title}${near.due ? ' (' + lc(fmtWhen(near.due)) + ')' : ''}${near.done ? ', redan avklarad' : ''}.` : `Jag hittar ingenting om "${q}", varken öppet eller avklarat.`); return; }
+  filter = 'q:' + q; setView('list');
+  say(`"${q}": ${open.length} öppna${done.length ? ' och ' + done.length + ' avklarade' : ''}. ` + hits.slice(0, 4).map(i => (i.raw && i.raw.length > i.title.length ? i.raw : i.title) + (i.due ? ' – ' + lc(fmtWhen(i.due)) : ' – utan tid') + (i.done ? ' ✓' : '')).join('; ') + (hits.length > 4 ? ' med flera.' : '.') + ' Listan är filtrerad, skriv "visa alla" för att återgå.');
+}
+
 /* ---------- Kommandon ---------- */
 const norm = (s) => s.toLowerCase().normalize('NFC').replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(w => w.length >= 2);
 function findItem(q, includeDone) {
@@ -494,7 +510,9 @@ function handle(raw) {
     if (c) { filter = 'k:' + c.name; render(); const n = state.items.filter(i => !i.done && (custOf(i) || {}).name === c.name);
       say(n.length ? fill(`${c.name}: ${n.length} öppna. ` + n.slice(0, 3).map(i => (i.due ? fmtWhen(i.due) + ' ' : '') + i.title).join(', ') + (n.length > 3 ? ' med flera.' : '.')) : fill(`Inget öppet med ${c.name} just nu, {a}.`)); return; }
     if (/^(alla|allt|lista|listan)$/.test(x[1])) { filter = 'all'; setView('list'); say('Allt visas igen.'); return; }
+    if (findItem(x[1], true)) { search(x[1]); return; }
   }
+  if ((x = low.match(/^(?:sök upp|sök efter|sök|hitta|leta efter|leta upp|leta|var är|var ligger)\s+(.+)/))) { search(x[1]); return; }
   if (/^(vad har jag|vad ska jag|vad händer|läget|status|översikt|hur ser (dagen|det|morgondagen) ut|dagens)/.test(low)) {
     say(summary(/imorgon|imorn|morgondagen/.test(low) ? 'tomorrow' : 'today')); return;
   }
@@ -530,7 +548,7 @@ function groups() {
   for (const k in g) g[k].sort((a, b) => (a.due || a.created) - (b.due || b.created));
   g.none.sort((a, b) => b.important - a.important || a.created - b.created);
   const start = new Date(); start.setHours(0,0,0,0);
-  g.done = state.items.filter(i => i.done && i.doneAt >= start.getTime() && matchF(i)).sort((a, b) => b.doneAt - a.doneAt);
+  g.done = state.items.filter(i => i.done && (filter.startsWith('q:') || i.doneAt >= start.getTime()) && matchF(i)).sort((a, b) => b.doneAt - a.doneAt);
   return g;
 }
 function custTag(i) { const c = custOf(i); return c ? `<span class="cust" data-k="${esc(c.name)}" style="--c:${c.color}" title="Visa allt för ${esc(c.name)}">${esc(c.name)}</span>` : ''; }
@@ -600,7 +618,8 @@ function render() {
   const counts = { all: open.length }; for (const i of open) counts[i.cat] = (counts[i.cat] || 0) + 1;
   const cc = {}; for (const i of open) { const c = custOf(i); if (c) cc[c.name] = (cc[c.name] || 0) + 1; }
   if (filter.startsWith('k:') && !cc[filter.slice(2)]) cc[filter.slice(2)] = 0;
-  $('filters').innerHTML = [['all', 'Alla'], ...Object.entries(CATS).map(([k, c]) => [k, c.icon + ' ' + c.label])]
+  const qchip = filter.startsWith('q:') ? `<button class="chip on" data-f="all">🔍 ${esc(filter.slice(2))} ✕</button>` : '';
+  $('filters').innerHTML = qchip + [['all', 'Alla'], ...Object.entries(CATS).map(([k, c]) => [k, c.icon + ' ' + c.label])]
     .filter(([k]) => k === 'all' || counts[k]).map(([k, l]) => `<button class="chip ${filter === k ? 'on' : ''}" data-f="${k}">${l}<span class="n">${counts[k] || 0}</span></button>`).join('')
     + customers().filter(c => c.name in cc).sort((a, b) => cc[b.name] - cc[a.name]).map(c => `<button class="chip ${filter === 'k:' + c.name ? 'on' : ''}" data-f="k:${esc(c.name)}" style="--c:${c.color}"><span class="dot"></span> ${esc(c.name)}<span class="n">${cc[c.name]}</span></button>`).join('');
   $('stat').textContent = open.length + ' aktiva' + (g.overdue.length ? ' · ' + g.overdue.length + ' väntar' : '');
@@ -659,7 +678,7 @@ $('addForm').onsubmit = (e) => {
   userSaid(v); handle(v); $('q').value = ''; $('preview').innerHTML = '';
   if (bridge && fromHotkey) { fromHotkey = false; setTimeout(() => bridge.hide(), 1400); }
 };
-const CMD = /^(briefing|morgonrapport|veckan|vecka|nästa vecka|veckovy|visa |hej|hallå|hejsan|tjena|tja|tjenare|morrn|god\s|yo\b|vad har jag|vad ska jag|vad händer|läget|status|översikt|hur ser|dagens|briefing|tack|vem är du|vad är du|vad kan du|vad heter du|hjälp|klar\s|klart\s|fixat\s|gjort\s|avbocka|bocka av|done\s|ta bort|radera|stryk|skjut upp|flytta|senarelägg|uppdater|sök efter uppdatering|vilken version|version$)/i;
+const CMD = /^(sök|hitta|leta|var är|var ligger|briefing|morgonrapport|veckan|vecka|nästa vecka|veckovy|visa |hej|hallå|hejsan|tjena|tja|tjenare|morrn|god\s|yo\b|vad har jag|vad ska jag|vad händer|läget|status|översikt|hur ser|dagens|briefing|tack|vem är du|vad är du|vad kan du|vad heter du|hjälp|klar\s|klart\s|fixat\s|gjort\s|avbocka|bocka av|done\s|ta bort|radera|stryk|skjut upp|flytta|senarelägg|uppdater|sök efter uppdatering|vilken version|version$)/i;
 $('q').oninput = () => {
   const v = $('q').value.trim(); if (!v) { $('preview').innerHTML = ''; return; }
   if (CMD.test(v)) { $('preview').innerHTML = '› kommando till Jarvis'; return; }
