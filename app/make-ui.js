@@ -12,5 +12,10 @@ for (const f of files) {
   fs.writeFileSync(path.join(out, f), buf);
   man.files[f] = crypto.createHash('sha256').update(buf).digest('hex');
 }
+// Motor (exe) som Jarvis kan byta till själv: ../shell/Jarvis-<version>-portable.exe
+const shellVer = require('./package.json').version;
+const exe = path.join(__dirname, '..', 'shell', 'Jarvis-' + shellVer + '-portable.exe');
+if (fs.existsSync(exe)) man.shell = { version: shellVer, url: 'https://raw.githubusercontent.com/576F3154/jarvis/main/shell/Jarvis-' + shellVer + '-portable.exe',
+  sha256: crypto.createHash('sha256').update(fs.readFileSync(exe)).digest('hex'), note: note };
 fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify(man, null, 1));
 console.log('ui ' + ver + ' klar i ' + out);

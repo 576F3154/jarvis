@@ -216,7 +216,7 @@ details summary::-webkit-details-marker{display:none}
   </table>
   <h3 style="margin-top:18px">Kortkommandon</h3>
   <table>
-    <tr><td>Ctrl+Shift+Mellanslag</td><td>Öppna från var som helst, skriv, Enter, tillbaka till jobbet</td></tr>
+    <tr><td class="hkLbl">Ctrl+Mellanslag</td><td>Öppna från var som helst, skriv, Enter, tillbaka till jobbet</td></tr>
     <tr><td>Ctrl+K eller /</td><td>Hoppa till fältet</td></tr>
     <tr><td>Dubbelklick</td><td>Ändra en påminnelse</td></tr>
     <tr><td>Esc</td><td>Stäng / dölj</td></tr>
@@ -230,6 +230,7 @@ details summary::-webkit-details-marker{display:none}
   <label><input type="checkbox" id="optSound"> Ljud vid påminnelse</label>
   <label><input type="checkbox" id="optVoice"> Jarvis läser upp påminnelser (Windows röst)</label>
   <label id="autoRow"><input type="checkbox" id="optAuto"> Starta med Windows</label>
+  <label id="hkRow">Snabbkommando för att öppna Jarvis <button class="chip" id="hkBtn" style="font-family:var(--mono)">Ctrl+Mellanslag</button></label>
   <label>Jarvis kallar dig <input type="text" id="optAddr" maxlength="24" placeholder="inget tilltal"></label>
   <label><input type="checkbox" id="optBrief"> Morgonbriefing i popup kl <input type="time" id="optBriefTime" value="07:30"></label>
   <p style="margin:14px 0 6px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)">Kunder &amp; leverantörer (en per rad)</p>
@@ -499,6 +500,7 @@ function handle(raw) {
   if (/^(tack|tackar|tusen tack|tack så mycket)\b/.test(low)) { say(fill(pick(L.thanks))); return; }
   if (/^(vem är du|vad är du|vad kan du|vad heter du)/.test(low)) { say(fill(pick(L.who))); return; }
   if (/^(uppdatera|uppdatering|sök (efter )?uppdatering|finns det (någon )?uppdatering|vilken version|version)/.test(low)) { checkForUpdate(); return; }
+  if (/^(byt|ändra) (snabbkommando|kortkommando|genväg)/.test(low)) { openPanel('setPanel'); $('hkBtn').click(); say('Tryck den kombination du vill använda.'); return; }
   if (/^(hjälp|help|\?)$/.test(low)) { say('Här är allt jag kan. Stäng med Esc när du är klar.'); openPanel('helpPanel'); return; }
   if ((x = low.match(/^(?:klar|klart|fixat|gjort|avbocka|bocka av|done)\s+(?:med\s+)?(.+)/))) {
     const i = findItem(x[1]); if (!i) { say(fill(pick(L.notFound), { q: x[1] })); return; }
@@ -801,6 +803,35 @@ function tick() {
   render();
 }
 
+/* ---------- Snabbkommando ---------- */
+const hkLabel = (a) => String(a || '').replace('CommandOrControl', 'Ctrl').replace('Space', 'Mellanslag');
+async function showHotkey() {
+  if (!bridge || !bridge.getHotkey) { $('hkBtn').textContent = 'Ctrl+Shift+Mellanslag'; $('hkBtn').disabled = true; $('hkBtn').title = 'Kräver Jarvis-motor 2.3.0 eller senare'; document.querySelectorAll('.hkLbl').forEach(e => e.textContent = 'Ctrl+Shift+Mellanslag'); return; }
+  const h = await bridge.getHotkey(); $('hkBtn').textContent = h.label; document.querySelectorAll('.hkLbl').forEach(e => e.textContent = h.label);
+}
+function keyToAcc(e) {
+  const mods = []; if (e.ctrlKey) mods.push('CommandOrControl'); if (e.altKey) mods.push('Alt'); if (e.shiftKey) mods.push('Shift'); if (e.metaKey) mods.push('Super');
+  const c = e.code; let k = null;
+  if (/^Key[A-Z]$/.test(c)) k = c.slice(3); else if (/^Digit\d$/.test(c)) k = c.slice(5); else if (/^F\d{1,2}$/.test(c)) k = c;
+  else k = { Space: 'Space', Enter: 'Enter', Tab: 'Tab', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', Insert: 'Insert', Delete: 'Delete', Period: 'Period', Comma: 'Comma' }[c] || null;
+  return mods.length && k ? mods.join('+') + '+' + k : null;
+}
+$('hkBtn').onclick = () => {
+  if (!bridge || !bridge.setHotkey) return;
+  $('hkBtn').textContent = 'Tryck din kombination… (Esc avbryter)';
+  const onKey = async (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (e.key === 'Escape') { window.removeEventListener('keydown', onKey, true); showHotkey(); return; }
+    const acc = keyToAcc(e); if (!acc) return; // väntar på en riktig tangent + Ctrl/Alt/Shift
+    window.removeEventListener('keydown', onKey, true);
+    const r = await bridge.setHotkey(acc);
+    if (r.ok) { state.settings.hotkey = r.hotkey; save(); say('Klart. Nu öppnar du mig med ' + r.label + '.'); }
+    else say(hkLabel(acc) + ' gick inte att använda. Antingen upptaget av ett annat program eller ogiltigt. Jag behåller ' + r.label + '.');
+    showHotkey();
+  };
+  window.addEventListener('keydown', onKey, true);
+};
+
 /* ---------- Morgonbriefing ---------- */
 let briefData = null;
 function weekSummary(off = 0) {
@@ -845,6 +876,18 @@ function applyWhenIdle() {
   if (busy) { setTimeout(applyWhenIdle, 15000); return; }
   clearTimeout(saveT);
   Promise.resolve(bridge.save(state)).finally(() => setTimeout(() => bridge.applyUpdate(), 1800));
+}
+if (bridge && bridge.onShellReady) {
+  bridge.onShellReady((info) => {
+    say('Ny motor ' + info.version + ' är hämtad.' + (info.note ? ' Nytt: ' + info.note : '') + ' Jag startar om mig själv när du inte skriver något. Det tar några sekunder.');
+    const go = () => {
+      const busy = $('q').value.trim() || document.querySelector('.panel.open') || document.querySelector('.edit') || !$('menu').hidden;
+      if (busy) { setTimeout(go, 15000); return; }
+      clearTimeout(saveT); Promise.resolve(bridge.save(state)).finally(() => setTimeout(() => bridge.applyShell(), 2500));
+    };
+    go();
+  });
+  if (bridge.onShellFailed) bridge.onShellFailed(() => say('Den nya motorn ville inte starta, så jag kör vidare på den gamla. Inget är förlorat.'));
 }
 if (bridge && bridge.onUpdateReady) {
   bridge.onUpdateReady((info) => {
@@ -891,7 +934,7 @@ function bindSettings() {
   $('optAutoUpd').checked = state.settings.autoUpdate !== false;
   $('optAutoUpd').onchange = (e) => { state.settings.autoUpdate = e.target.checked; save(); say(e.target.checked ? 'Automatiska uppdateringar på.' : 'Automatiska uppdateringar av. Skriv "uppdatera" när du vill kolla själv.'); };
   $('updBtn').onclick = () => { $('setPanel').classList.remove('open'); checkForUpdate(); };
-  showVersion();
+  showVersion(); showHotkey();
   $('testPop').onclick = () => {
     const t = { id: 'test' + Date.now(), raw: 'Test', title: 'Testpåminnelse från Jarvis', due: Date.now() - 1000, cat: 'annat', done: false, notified: false, created: Date.now(), recur: null, deadline: false, important: false };
     state.items.push(t); $('setPanel').classList.remove('open'); tick();

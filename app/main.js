@@ -3,7 +3,8 @@ const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 
-const HOTKEY = 'CommandOrControl+Shift+Space';
+const DEFAULT_HOTKEY = 'CommandOrControl+Space';
+let hotkey = '';
 let win, popup, tray, quitting = false, popupItems = [];
 
 app.setName('Jarvis');
@@ -20,7 +21,7 @@ function retireOldApps() {
   if (process.platform !== 'win32') return;
   const ver = app.getVersion() + '.0';
   const cmd =
-    "Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne " + process.pid + " -and $_.Path -and ($_.ProcessName -like 'Kom ih*g' -or ($_.ProcessName -eq 'Jarvis' -and (Get-Item $_.Path).VersionInfo.FileVersion -ne '" + ver + "')) } | Stop-Process -Force -ErrorAction SilentlyContinue; " +
+    "Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne " + process.pid + " -and $_.Path -and ($_.ProcessName -like 'Kom ih*g' -or ($_.ProcessName -eq 'Jarvis' -and ([version]((Get-Item $_.Path).VersionInfo.FileVersion)) -lt [version]'" + ver + "')) } | Stop-Process -Force -ErrorAction SilentlyContinue; " +
     "$k='HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'; $p=Get-ItemProperty $k -ErrorAction SilentlyContinue; " +
     "if ($p) { $p.PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' -and ([string]$_.Value -like '*Kom ih*g*' -or [string]$_.Value -like '*KomIhag*') } | ForEach-Object { Remove-ItemProperty $k -Name $_.Name -ErrorAction SilentlyContinue } }";
   try { require('child_process').execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { timeout: 15000, windowsHide: true }); } catch {}
@@ -47,7 +48,7 @@ function showWin(focusInput) {
    Filerna laddas ner till %APPDATA%\Kom ihåg\ui\<version>\, kontrolleras mot sha256 och används sedan.
    Går något fel används den inbyggda versionen. Själva motorn (main.js/preload) uppdateras inte här. */
 const UPDATE_BASE = process.env.JARVIS_UPDATE_BASE || 'https://raw.githubusercontent.com/576F3154/jarvis/main/ui/';
-const BUNDLED_UI = '2.1.0';
+const BUNDLED_UI = '2.3.0';
 const SAFE_NAME = /^(?!.*\.\.)[a-z0-9_\-]+(\/[a-z0-9_\-]+)*\.(html|css|js|png|svg|json|mp3|wav)$/i;
 const uiRoot = () => path.join(app.getPath('userData'), 'ui');
 const cmpVer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < 3; i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; };
@@ -76,6 +77,15 @@ async function checkUpdate(manual) {
   try {
     const m = JSON.parse((await getBuf(UPDATE_BASE + 'manifest.json')).toString('utf8'));
     if (!m || !m.version || !m.files || typeof m.files !== 'object') throw new Error('ogiltigt manifest');
+    // Ny motor (exe)? Hämtas bredvid nuvarande exe, kontrolleras och startas sedan i stället för den här.
+    const sh = m.shell;
+    if (sh && sh.version && cmpVer(sh.version, app.getVersion()) > 0 && /^[a-f0-9]{64}$/.test(sh.sha256 || '') &&
+        /^https:\/\/(github\.com|raw\.githubusercontent\.com|objects\.githubusercontent\.com)\//.test(sh.url || '') && process.env.PORTABLE_EXECUTABLE_FILE) {
+      const target = await fetchShell(sh);
+      lastCheck = { at: Date.now(), result: 'shell-ready' };
+      win && win.webContents.send('shell-ready', { version: sh.version, note: sh.note || m.note || '' });
+      return { status: 'shell-ready', version: sh.version, target };
+    }
     if (cmpVer(m.version, ui.version) <= 0) { lastCheck = { at: Date.now(), result: 'latest' }; return { status: 'latest', version: ui.version }; }
     if (cmpVer(app.getVersion(), m.minShell || '0') < 0) { lastCheck = { at: Date.now(), result: 'needs-download' }; return { status: 'needs-download', version: m.version, note: m.note || '' }; }
     const names = Object.keys(m.files);
@@ -99,6 +109,68 @@ async function checkUpdate(manual) {
     return { status: 'error', error: String(e && e.message || e) };
   } finally { checking = false; }
 }
+let pendingShell = null;
+async function fetchShell(sh) {
+  const dir = path.dirname(process.env.PORTABLE_EXECUTABLE_FILE);
+  const target = path.join(dir, 'Jarvis-' + sh.version + '-portable.exe');
+  const sha = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+  if (fs.existsSync(target) && sha(target) === sh.sha256) { pendingShell = target; return target; }
+  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 15 * 60 * 1000);
+  try {
+    const r = await net.fetch(sh.url, { signal: ctrl.signal, cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (crypto.createHash('sha256').update(buf).digest('hex') !== sh.sha256) throw new Error('kontrollsumman för nya motorn stämmer inte');
+    fs.writeFileSync(target + '.part', buf); fs.renameSync(target + '.part', target);
+    try { fs.chmodSync(target, 0o755); } catch {}
+  } finally { clearTimeout(t); }
+  pendingShell = target; return target;
+}
+function applyShell() {
+  if (!pendingShell || !fs.existsSync(pendingShell)) return false;
+  const old = exePath();
+  try { if (app.getLoginItemSettings({ path: old }).openAtLogin) { app.setLoginItemSettings({ openAtLogin: false, path: old }); app.setLoginItemSettings({ openAtLogin: true, path: pendingShell }); } } catch {}
+  // Stäng bara om den nya motorn verkligen startade; annars fortsätter den här att köra
+  let child;
+  try { child = require('child_process').spawn(pendingShell, ['--replaced=' + old], { detached: true, stdio: 'ignore', cwd: path.dirname(pendingShell) }); }
+  catch { return false; }
+  child.once('error', () => { try { if (app.getLoginItemSettings({ path: pendingShell }).openAtLogin) { app.setLoginItemSettings({ openAtLogin: false, path: pendingShell }); app.setLoginItemSettings({ openAtLogin: true, path: old }); } } catch {} pendingShell = null; win && win.webContents.send('shell-failed'); });
+  child.once('spawn', () => {
+    child.unref();
+    quitting = true; try { globalShortcut.unregisterAll(); app.releaseSingleInstanceLock(); } catch {}
+    setTimeout(() => app.quit(), 300);
+  });
+  return true;
+}
+ipcMain.on('apply-shell', () => applyShell());
+// Efter motorbyte: ta bort den gamla exe-filen när den har stängt
+function cleanupReplaced() {
+  const arg = process.argv.find(a => a.startsWith('--replaced=')); if (!arg) return;
+  const old = arg.slice(11);
+  if (!old || path.resolve(old) === path.resolve(exePath()) || !/^(Jarvis-[\d.]+-portable|KomIhag-[\d.]+-portable)\.exe$/i.test(path.basename(old))) return;
+  let n = 0; const tryDel = () => { try { fs.unlinkSync(old); } catch { if (++n < 6) setTimeout(tryDel, 5000); } };
+  setTimeout(tryDel, 6000);
+}
+
+/* ---------- Snabbkommando (ändras från inställningarna) ---------- */
+const hotkeyLabel = (a) => String(a || '').replace('CommandOrControl', 'Ctrl').replace('Control', 'Ctrl').replace('Space', 'Mellanslag').replace(/\+/g, '+');
+function onHotkey() { if (win.isVisible() && win.isFocused()) { win.hide(); return; } showWin(true); }
+function registerHotkey(acc) {
+  const prev = hotkey; let ok = false;
+  try { if (prev) globalShortcut.unregister(prev); } catch {}
+  try { ok = globalShortcut.register(acc, onHotkey); } catch { ok = false; }
+  if (ok) hotkey = acc; else if (prev) { try { globalShortcut.register(prev, onHotkey); } catch {} }
+  buildTrayMenu();
+  return ok;
+}
+ipcMain.handle('get-hotkey', () => ({ hotkey, label: hotkeyLabel(hotkey) }));
+ipcMain.handle('set-hotkey', (_e, acc) => {
+  acc = String(acc || '');
+  if (!/^(CommandOrControl|Control|Alt|Shift|Super)(\+(CommandOrControl|Control|Alt|Shift|Super))*\+([A-Z0-9]|F\d{1,2}|Space|Enter|Tab|Backspace|Delete|Insert|Home|End|PageUp|PageDown|Up|Down|Left|Right|Plus|Minus|Period|Comma)$/.test(acc)) return { ok: false, hotkey, label: hotkeyLabel(hotkey) };
+  const ok = registerHotkey(acc);
+  return { ok, hotkey, label: hotkeyLabel(hotkey) };
+});
+
 function applyUpdate() {
   const before = ui.version; resolveUi();
   if (popup && !popup.isDestroyed()) popup.close();
@@ -106,7 +178,7 @@ function applyUpdate() {
 }
 ipcMain.handle('check-update', () => checkUpdate(true));
 ipcMain.on('apply-update', () => applyUpdate());
-ipcMain.handle('versions', () => ({ ui: ui.version, shell: app.getVersion(), note: ui.note || '', lastCheck }));
+ipcMain.handle('versions', () => ({ ui: ui.version, shell: app.getVersion(), note: ui.note || '', lastCheck, portable: !!process.env.PORTABLE_EXECUTABLE_FILE }));
 
 const icon = () => path.join(__dirname, 'build/icon.png');
 
@@ -171,10 +243,15 @@ ipcMain.on('popup-dismiss', () => { popupItems = []; if (popup) popup.close(); w
 function createTray() {
   tray = new Tray(nativeImage.createFromPath(icon()).resize({ width: 16, height: 16 }));
   tray.setToolTip('Jarvis');
+  tray.on('click', () => showWin());
+  buildTrayMenu();
+}
+function buildTrayMenu() {
+  if (!tray) return;
   const autostart = () => app.getLoginItemSettings({ path: exePath() }).openAtLogin;
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Visa Jarvis', click: () => showWin() },
-    { label: 'Ny påminnelse  (Ctrl+Shift+Mellanslag)', click: () => showWin(true) },
+    { label: 'Ny påminnelse' + (hotkey ? '  (' + hotkeyLabel(hotkey) + ')' : ''), click: () => showWin(true) },
     { label: 'Sök efter uppdatering', click: () => { showWin(); win.webContents.send('check-update-now'); } },
     { type: 'separator' },
     { label: 'Starta med Windows', type: 'checkbox', checked: autostart(),
@@ -182,7 +259,6 @@ function createTray() {
     { type: 'separator' },
     { label: 'Avsluta', click: () => { quitting = true; app.quit(); } }
   ]));
-  tray.on('click', () => showWin());
 }
 
 app.whenReady().then(() => {
@@ -190,10 +266,9 @@ app.whenReady().then(() => {
   setTimeout(retireOldApps, 1500); // städar bort gamla Kom ihåg även om den inte höll låset
   createWindow();
   createTray();
-  globalShortcut.register(HOTKEY, () => {
-    if (win.isVisible() && win.isFocused()) { win.hide(); return; }
-    showWin(true);
-  });
+  let saved = ''; try { saved = (JSON.parse(fs.readFileSync(dataFile(), 'utf8')).settings || {}).hotkey || ''; } catch {}
+  if (!(saved && registerHotkey(saved)) && !registerHotkey(DEFAULT_HOTKEY)) registerHotkey('CommandOrControl+Shift+Space');
+  cleanupReplaced();
   setTimeout(() => checkUpdate(), 20000);
   setInterval(() => checkUpdate(), 60 * 60 * 1000);
 });

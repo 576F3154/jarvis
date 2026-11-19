@@ -16,5 +16,10 @@ contextBridge.exposeInMainWorld('api', {
   applyUpdate: () => ipcRenderer.send('apply-update'),
   versions: () => ipcRenderer.invoke('versions'),
   onUpdateReady: (cb) => ipcRenderer.on('update-ready', (_e, info) => cb(info)),
-  onCheckNow: (cb) => ipcRenderer.on('check-update-now', () => cb())
+  onCheckNow: (cb) => ipcRenderer.on('check-update-now', () => cb()),
+  getHotkey: () => ipcRenderer.invoke('get-hotkey'),
+  setHotkey: (acc) => ipcRenderer.invoke('set-hotkey', String(acc)),
+  applyShell: () => ipcRenderer.send('apply-shell'),
+  onShellReady: (cb) => ipcRenderer.on('shell-ready', (_e, info) => cb(info)),
+  onShellFailed: (cb) => ipcRenderer.on('shell-failed', () => cb())
 });
