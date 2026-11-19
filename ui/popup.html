@@ -38,6 +38,13 @@ html,body{margin:0;background:transparent;color:var(--ink);font:14px/1.4 "Bahnsc
 .btns button:hover{background:rgba(62,230,255,.18);border-color:var(--cy)}
 .btns .ok{background:linear-gradient(180deg,var(--cy),var(--cy2));color:#021018;border-color:var(--cy);font-weight:700}
 .btns .ok:hover{filter:brightness(1.12);background:linear-gradient(180deg,var(--cy),var(--cy2))}
+.bl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin-top:4px;font-size:14px}
+.bl .tm{font-family:"Cascadia Mono",Consolas,monospace;font-size:12.5px;color:var(--cy);padding-top:1px}
+.bl .tm.warn{color:var(--red)}
+.bl .bx{word-wrap:break-word}
+.bl .tg{white-space:nowrap;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;border:1px solid color-mix(in srgb,var(--c) 55%,transparent);color:var(--c);border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:1px}
+.bl .dl{font-size:9.5px;letter-spacing:.08em;color:var(--gold);border:1px solid rgba(255,181,71,.45);border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:1px}
+.it.brief{border-color:rgba(62,230,255,.4);background:rgba(62,230,255,.07)}
 .more{font-size:12px;color:var(--muted);margin-top:8px;text-align:right;cursor:pointer}
 .more:hover{color:var(--cy)}
 @media (prefers-reduced-motion: reduce){.frame,.reactor,.say .cur{animation:none}}
@@ -68,8 +75,13 @@ function type(text) {
 function render(items) {
   if (!items || !items.length) return;
   type(items[0].line || 'Ursäkta att jag stör.');
-  $('sub').textContent = items.length > 1 ? items.length + ' saker väntar' : (items[0].kind === 'warn' ? 'Förvarning' : 'Påminnelse');
-  $('list').innerHTML = items.map(i => `<div class="it ${i.kind === 'warn' ? 'warn' : ''} ${i.important ? 'imp' : ''}" data-id="${esc(i.id)}">
+  const nb = items.filter(i => i.kind !== 'brief').length;
+  $('sub').textContent = items[0].kind === 'brief' ? 'Morgonbriefing' : nb > 1 ? nb + ' saker väntar' : (items[0].kind === 'warn' ? 'Förvarning' : 'Påminnelse');
+  $('list').innerHTML = items.map(i => i.kind === 'brief' ? `<div class="it brief" data-id="brief">
+    <div class="t">☀ ${esc(i.title)}</div>
+    ${i.lines && i.lines.length ? `<div class="bl">${i.lines.map(l => `<span class="tm ${l.warn ? 'warn' : ''}">${esc(l.t)}</span><span class="bx">${l.imp ? '<b style="color:var(--red)">! </b>' : ''}${esc(l.x)}${l.dl ? '<span class="dl">STOPPTID</span>' : ''}${l.k ? `<span class="tg" style="--c:${esc(l.c)}">${esc(l.k)}</span>` : ''}</span>`).join('')}</div>` : '<div class="w">Inget inbokat.</div>'}
+    ${i.more ? `<div class="w">+ ${i.more} till</div>` : ''}
+    <div class="btns"><button class="ok" data-a="ack">✓ Uppfattat</button><button data-a="week">▦ Veckan</button></div></div>` : `<div class="it ${i.kind === 'warn' ? 'warn' : ''} ${i.important ? 'imp' : ''}" data-id="${esc(i.id)}">
     <div class="t">${esc(i.icon || '')} ${esc(i.title)}</div>
     <div class="w">${esc(i.when || '')}</div>
     <div class="btns">
