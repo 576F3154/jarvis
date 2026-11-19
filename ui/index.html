@@ -960,6 +960,10 @@ function bindSettings() {
     if (state.settings.lastGreet !== today) say(fill(pick(L.hello), { tod: tod() }) + ' ' + summary('today'));
     else renderFeed();
   }
+  if (bridge && !bridge.getHotkey && !state.settings.shellHint23) {
+    state.settings.shellHint23 = Date.now();
+    say('En sak till: det finns en ny motor, version 2.3.0. Den ger Ctrl+Mellanslag och gör att jag kan uppdatera hela mig själv framöver. Den behöver laddas ner en sista gång från sidan "Jarvis för Windows" på claude.ai.');
+  }
   state.settings.lastGreet = new Date().toDateString(); save();
   tick(); setInterval(tick, 10000);
   $('q').focus();

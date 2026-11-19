@@ -1,9 +1,9 @@
 {
- "version": "2.3.0",
+ "version": "2.3.1",
  "minShell": "2.1.0",
- "note": "Ctrl+Mellanslag öppnar mig nu, och kombinationen går att byta under inställningar. Dessutom kan jag nu uppdatera hela mig själv, även motorn.",
+ "note": "Snabbkommandot går att byta under inställningar.",
  "files": {
-  "index.html": "288f8af8dd5303137d5344f5418143a9117a522c5e298b2779efbb8669ebd7e7",
+  "index.html": "3c7332126e7a0b8437545029ab53e4184cf439665ea5f4eb3286db1f6c069965",
   "popup.html": "7e75c8efd7979cb840e9f31863ecd4f3a18dc4300127232336030268144a9122",
   "build/icon.png": "7a1c43186a98bde4d4e1beb8cfe0595ac72845720665e4db9bf2ee7d2ace6305"
  },
@@ -11,6 +11,6 @@
   "version": "2.3.0",
   "url": "https://raw.githubusercontent.com/576F3154/jarvis/main/shell/Jarvis-2.3.0-portable.exe",
   "sha256": "7c1131ec76e2b1c90adc35fcd5fbfaf14a49be246fc2846b8424494d3e9d004f",
-  "note": "Ctrl+Mellanslag öppnar mig nu, och kombinationen går att byta under inställningar. Dessutom kan jag nu uppdatera hela mig själv, även motorn."
+  "note": "Snabbkommandot går att byta under inställningar."
  }
 }
