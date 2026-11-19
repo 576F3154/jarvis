@@ -1,16 +1,16 @@
 {
- "version": "2.3.3",
+ "version": "2.4.0",
  "minShell": "2.1.0",
- "note": "Sökfunktion: skriv till exempel sök rocklunda så hittar jag allt som innehåller ordet, även avklarade.",
+ "note": "Claude kan nu ändra mina påminnelser direkt, och jag säger till här när det händer.",
  "files": {
-  "index.html": "c6e2ae59831f09ab91b7c35d4476bb3b4ac4f627a15d0350eba0129bdc5788c5",
+  "index.html": "5f0294fbbf6bb5a20922a68b8ebd6ae0f84c77b5aee00c1897c16ae1c8f23601",
   "popup.html": "a5fc253fa317621f7fafbf368dcb7a5a9836f154a8c8fd75248c4f2aad77bead",
   "build/icon.png": "7a1c43186a98bde4d4e1beb8cfe0595ac72845720665e4db9bf2ee7d2ace6305"
  },
  "shell": {
-  "version": "2.3.0",
-  "url": "https://raw.githubusercontent.com/576F3154/jarvis/main/shell/Jarvis-2.3.0-portable.exe",
-  "sha256": "7c1131ec76e2b1c90adc35fcd5fbfaf14a49be246fc2846b8424494d3e9d004f",
-  "note": "Sökfunktion: skriv till exempel sök rocklunda så hittar jag allt som innehåller ordet, även avklarade."
+  "version": "2.3.1",
+  "url": "https://raw.githubusercontent.com/576F3154/jarvis/main/shell/Jarvis-2.3.1-portable.exe",
+  "sha256": "5eb2a96d3ad616826840e3ea96dd4f49759dc228a7bcf5b4f1425b5e9faf5338",
+  "note": "Claude kan nu ändra mina påminnelser direkt, och jag säger till här när det händer."
  }
 }

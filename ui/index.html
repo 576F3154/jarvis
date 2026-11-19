@@ -897,6 +897,22 @@ function applyWhenIdle() {
   clearTimeout(saveT);
   Promise.resolve(bridge.save(state)).finally(() => setTimeout(() => bridge.applyUpdate(), 1800));
 }
+/* Ändringar gjorda utanför appen (t.ex. av Claude) */
+if (bridge && bridge.onDataChanged) {
+  bridge.onDataChanged((d) => {
+    const before = new Map(state.items.map(i => [i.id, JSON.stringify(i)]));
+    const chat = state.chat;
+    state = { ...d, items: d.items, settings: { ...state.settings, ...(d.settings || {}) }, chat: Array.isArray(d.chat) && d.chat.length >= chat.length ? d.chat : chat };
+    const added = state.items.filter(i => !before.has(i.id)), changed = state.items.filter(i => before.has(i.id) && before.get(i.id) !== JSON.stringify(i));
+    const removed = [...before.keys()].filter(id => !state.items.some(i => i.id === id)).length;
+    const parts = [];
+    if (added.length) parts.push('lade till ' + added.map(i => i.title + (i.due ? ' (' + lc(fmtWhen(i.due)) + ')' : '')).join(', '));
+    if (changed.length) parts.push('ändrade ' + changed.map(i => i.title + (i.due ? ' till ' + lc(fmtWhen(i.due)) : '')).join(', '));
+    if (removed) parts.push('tog bort ' + removed + ' st');
+    render();
+    if (parts.length) say('Claude ' + parts.join(', ') + '.');
+  });
+}
 if (bridge && bridge.onShellReady) {
   bridge.onShellReady((info) => {
     say('Ny motor ' + info.version + ' är hämtad.' + (info.note ? ' Nytt: ' + info.note : '') + ' Jag startar om mig själv när du inte skriver något. Det tar några sekunder.');

@@ -21,5 +21,6 @@ contextBridge.exposeInMainWorld('api', {
   setHotkey: (acc) => ipcRenderer.invoke('set-hotkey', String(acc)),
   applyShell: () => ipcRenderer.send('apply-shell'),
   onShellReady: (cb) => ipcRenderer.on('shell-ready', (_e, info) => cb(info)),
-  onShellFailed: (cb) => ipcRenderer.on('shell-failed', () => cb())
+  onShellFailed: (cb) => ipcRenderer.on('shell-failed', () => cb()),
+  onDataChanged: (cb) => ipcRenderer.on('data-changed', (_e, d) => cb(d))
 });

@@ -48,7 +48,7 @@ function showWin(focusInput) {
    Filerna laddas ner till %APPDATA%\Kom ihåg\ui\<version>\, kontrolleras mot sha256 och används sedan.
    Går något fel används den inbyggda versionen. Själva motorn (main.js/preload) uppdateras inte här. */
 const UPDATE_BASE = process.env.JARVIS_UPDATE_BASE || 'https://raw.githubusercontent.com/576F3154/jarvis/main/ui/';
-const BUNDLED_UI = '2.3.0';
+const BUNDLED_UI = '2.4.0';
 const SAFE_NAME = /^(?!.*\.\.)[a-z0-9_\-]+(\/[a-z0-9_\-]+)*\.(html|css|js|png|svg|json|mp3|wav)$/i;
 const uiRoot = () => path.join(app.getPath('userData'), 'ui');
 const cmpVer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < 3; i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; };
@@ -269,16 +269,38 @@ app.whenReady().then(() => {
   let saved = ''; try { saved = (JSON.parse(fs.readFileSync(dataFile(), 'utf8')).settings || {}).hotkey || ''; } catch {}
   if (!(saved && registerHotkey(saved)) && !registerHotkey(DEFAULT_HOTKEY)) registerHotkey('CommandOrControl+Shift+Space');
   cleanupReplaced();
+  try { lastWritten = fs.readFileSync(dataFile(), 'utf8'); } catch {}
+  watchData();
   setTimeout(() => checkUpdate(), 20000);
   setInterval(() => checkUpdate(), 60 * 60 * 1000);
 });
+/* Ändringar i data.json utifrån (t.ex. Claude via Remote Control) laddas in direkt */
+function watchData() {
+  const dir = path.dirname(dataFile()); let t = null;
+  try {
+    fs.watch(dir, (_ev, name) => {
+      if (name && name !== 'data.json') return;
+      clearTimeout(t);
+      t = setTimeout(() => {
+        let txt = ''; try { txt = fs.readFileSync(dataFile(), 'utf8'); } catch { return; }
+        if (!txt || txt === lastWritten) return;
+        let d; try { d = JSON.parse(txt); } catch { return; }
+        if (!d || !Array.isArray(d.items)) return;
+        lastWritten = txt;
+        win && win.webContents.send('data-changed', d);
+      }, 400);
+    });
+  } catch {}
+}
 app.on('before-quit', () => { quitting = true; });
 app.on('will-quit', () => globalShortcut.unregisterAll());
 
 /* ---------- Lagring & övrigt ---------- */
 ipcMain.handle('load', () => { try { return JSON.parse(fs.readFileSync(dataFile(), 'utf8')); } catch { return null; } });
+let lastWritten = '';
 ipcMain.handle('save', (_e, data) => {
   const f = dataFile(), json = JSON.stringify(data, null, 1);
+  lastWritten = json;
   fs.mkdirSync(path.dirname(f), { recursive: true });
   try { if (fs.existsSync(f)) fs.copyFileSync(f, f + '.bak'); } catch {}
   fs.writeFileSync(f + '.tmp', json); fs.renameSync(f + '.tmp', f);
