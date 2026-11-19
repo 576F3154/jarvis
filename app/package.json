@@ -1,0 +1,42 @@
+{
+  "name": "jarvis",
+  "productName": "Jarvis",
+  "version": "2.1.0",
+  "description": "Jarvis – din påminnelse-kollega",
+  "main": "main.js",
+  "author": "Mälardalens Frukt & Grönt",
+  "build": {
+    "appId": "se.mfg.jarvis",
+    "productName": "Jarvis",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "popup.html",
+      "popup-preload.js",
+      "build/icon.png"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "Jarvis-${version}-portable.exe"
+    },
+    "afterPack": "./afterPack.js"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "pe-library": "^2.0.3",
+    "resedit": "^2.0.3"
+  }
+}

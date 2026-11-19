@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'">
+<title>Jarvis</title>
+<style>
+:root{--cy:#3ee6ff;--cy2:#0fb4d8;--glow:rgba(62,230,255,.45);--gold:#ffb547;--red:#ff4d5e;--ink:#d8f6ff;--muted:#7fa9b8;--panel:rgba(4,14,24,.94)}
+*{box-sizing:border-box}
+html,body{margin:0;background:transparent;color:var(--ink);font:14px/1.4 "Bahnschrift","Segoe UI",system-ui,sans-serif;overflow:hidden;user-select:none}
+.frame{margin:10px;position:relative;background:linear-gradient(160deg,rgba(10,32,48,.96),var(--panel));border:1px solid rgba(62,230,255,.45);border-radius:14px;padding:14px 16px 14px;box-shadow:0 0 24px var(--glow),inset 0 0 30px rgba(62,230,255,.08);animation:in .45s cubic-bezier(.2,.9,.25,1.2)}
+.frame::before{content:"";position:absolute;inset:0;border-radius:14px;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(62,230,255,.035) 0 1px,transparent 1px 3px)}
+.c{position:absolute;width:14px;height:14px;border:2px solid var(--cy);filter:drop-shadow(0 0 4px var(--cy))}
+.c.tl{top:-2px;left:-2px;border-right:0;border-bottom:0;border-top-left-radius:12px}
+.c.tr{top:-2px;right:-2px;border-left:0;border-bottom:0;border-top-right-radius:12px}
+.c.bl{bottom:-2px;left:-2px;border-right:0;border-top:0;border-bottom-left-radius:12px}
+.c.br{bottom:-2px;right:-2px;border-left:0;border-top:0;border-bottom-right-radius:12px}
+@keyframes in{from{opacity:0;transform:translateX(40px) scale(.96)}to{opacity:1;transform:none}}
+.head{display:flex;align-items:center;gap:10px;-webkit-app-region:drag}
+.reactor{width:34px;height:34px;flex:none;filter:drop-shadow(0 0 6px var(--cy));animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{50%{filter:drop-shadow(0 0 14px var(--cy)) brightness(1.2);transform:scale(1.05)}}
+.name{font-weight:700;letter-spacing:.32em;font-size:13px;color:var(--cy);text-shadow:0 0 8px var(--glow)}
+.sub{font-size:10.5px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+.x{margin-left:auto;-webkit-app-region:no-drag;border:1px solid rgba(62,230,255,.3);background:transparent;color:var(--muted);border-radius:8px;width:28px;height:28px;cursor:pointer;font:inherit}
+.x:hover{color:var(--ink);border-color:var(--cy)}
+.say{margin:12px 2px 10px;font-size:15px;color:var(--ink);min-height:21px}
+.say .cur{display:inline-block;width:7px;height:15px;background:var(--cy);vertical-align:-2px;margin-left:2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.it{border:1px solid rgba(62,230,255,.22);background:rgba(62,230,255,.05);border-radius:10px;padding:10px 11px;margin-top:8px}
+.it.warn{border-color:rgba(255,181,71,.45);background:rgba(255,181,71,.06)}
+.it.imp{border-color:rgba(255,77,94,.55);background:rgba(255,77,94,.07)}
+.t{font-size:15.5px;font-weight:600;word-wrap:break-word}
+.w{font-size:12px;color:var(--muted);letter-spacing:.04em;margin-top:2px;font-variant-numeric:tabular-nums}
+.it.warn .w{color:var(--gold)}
+.it.imp .w{color:var(--red)}
+.btns{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.btns button{font:inherit;font-size:12.5px;letter-spacing:.04em;cursor:pointer;border-radius:8px;padding:6px 10px;border:1px solid rgba(62,230,255,.35);background:rgba(62,230,255,.06);color:var(--ink)}
+.btns button:hover{background:rgba(62,230,255,.18);border-color:var(--cy)}
+.btns .ok{background:linear-gradient(180deg,var(--cy),var(--cy2));color:#021018;border-color:var(--cy);font-weight:700}
+.btns .ok:hover{filter:brightness(1.12);background:linear-gradient(180deg,var(--cy),var(--cy2))}
+.more{font-size:12px;color:var(--muted);margin-top:8px;text-align:right;cursor:pointer}
+.more:hover{color:var(--cy)}
+@media (prefers-reduced-motion: reduce){.frame,.reactor,.say .cur{animation:none}}
+</style>
+</head>
+<body>
+<div class="frame" id="frame">
+  <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+  <div class="head">
+    <img class="reactor" src="build/icon.png" alt="">
+    <div><div class="name">JARVIS</div><div class="sub" id="sub">Påminnelse</div></div>
+    <button class="x" id="x" title="Stäng (finns kvar i listan)">✕</button>
+  </div>
+  <div class="say" id="say"></div>
+  <div id="list"></div>
+  <div class="more" id="open">Öppna Jarvis →</div>
+</div>
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let typing = null, lastLine = '';
+function type(text) {
+  if (text === lastLine) return; lastLine = text;
+  clearInterval(typing); let k = 0; const el = $('say');
+  typing = setInterval(() => { k += 2; el.innerHTML = esc(text.slice(0, k)) + '<span class="cur"></span>'; if (k >= text.length) { clearInterval(typing); el.innerHTML = esc(text); } }, 18);
+}
+function render(items) {
+  if (!items || !items.length) return;
+  type(items[0].line || 'Ursäkta att jag stör.');
+  $('sub').textContent = items.length > 1 ? items.length + ' saker väntar' : (items[0].kind === 'warn' ? 'Förvarning' : 'Påminnelse');
+  $('list').innerHTML = items.map(i => `<div class="it ${i.kind === 'warn' ? 'warn' : ''} ${i.important ? 'imp' : ''}" data-id="${esc(i.id)}">
+    <div class="t">${esc(i.icon || '')} ${esc(i.title)}</div>
+    <div class="w">${esc(i.when || '')}</div>
+    <div class="btns">
+      <button class="ok" data-a="done">✓ Klart</button>
+      <button data-a="snooze" data-m="10">+10 min</button>
+      <button data-a="snooze" data-m="60">+1 h</button>
+      <button data-a="tomorrow">Imorgon 08:00</button>
+    </div></div>`).join('');
+  requestAnimationFrame(() => window.pop.size(document.body.scrollHeight + 4));
+}
+window.pop.onItems(render);
+$('list').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const id = b.closest('.it').dataset.id;
+  window.pop.act(id, b.dataset.a, b.dataset.m);
+});
+$('x').onclick = () => window.pop.dismiss();
+$('open').onclick = () => window.pop.act('-', 'open');
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.pop.dismiss(); });
+new ResizeObserver(() => window.pop.size(document.body.scrollHeight + 4)).observe($('frame'));
+</script>
+</body>
+</html>

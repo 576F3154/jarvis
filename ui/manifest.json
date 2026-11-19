@@ -1,0 +1,10 @@
+{
+ "version": "2.1.0",
+ "minShell": "2.1.0",
+ "note": "Första versionen med automatiska uppdateringar.",
+ "files": {
+  "index.html": "3e71461c70dba93d5f083d9270743c4e7209026f031d122a4f552617ff6bdc61",
+  "popup.html": "89d2b09d6560b5ecab176effd755b04d127d9f75af422ec1f6f33f4d149aac1c",
+  "build/icon.png": "7a1c43186a98bde4d4e1beb8cfe0595ac72845720665e4db9bf2ee7d2ace6305"
+ }
+}
