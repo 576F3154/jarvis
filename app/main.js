@@ -48,7 +48,8 @@ function showWin(focusInput) {
    Filerna laddas ner till %APPDATA%\Kom ihåg\ui\<version>\, kontrolleras mot sha256 och används sedan.
    Går något fel används den inbyggda versionen. Själva motorn (main.js/preload) uppdateras inte här. */
 const UPDATE_BASE = process.env.JARVIS_UPDATE_BASE || 'https://raw.githubusercontent.com/576F3154/jarvis/main/ui/';
-const BUNDLED_UI = '2.4.0';
+const BUNDLED_UI = '2.4.3';
+const SHA_URL = 'https://api.github.com/repos/576F3154/jarvis/commits/main';
 const SAFE_NAME = /^(?!.*\.\.)[a-z0-9_\-]+(\/[a-z0-9_\-]+)*\.(html|css|js|png|svg|json|mp3|wav)$/i;
 const uiRoot = () => path.join(app.getPath('userData'), 'ui');
 const cmpVer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < 3; i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; };
@@ -67,7 +68,7 @@ function resolveUi() {
 const uiFile = (name) => path.join(fs.existsSync(path.join(ui.dir, name)) ? ui.dir : __dirname, name);
 async function getBuf(url) {
   const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 30000);
-  try { const r = await net.fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), { signal: ctrl.signal, cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status); return Buffer.from(await r.arrayBuffer()); }
+  try { const api = url.startsWith('https://api.github.com/'); const r = await net.fetch(api ? url : url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), { signal: ctrl.signal, cache: 'no-store', headers: api ? { Accept: 'application/vnd.github.sha', 'User-Agent': 'Jarvis' } : {} }); if (!r.ok) throw new Error('HTTP ' + r.status); return Buffer.from(await r.arrayBuffer()); }
   finally { clearTimeout(t); }
 }
 let checking = false, lastCheck = { at: 0, result: '' };
@@ -75,7 +76,13 @@ async function checkUpdate(manual) {
   if (checking) return { status: 'busy' };
   checking = true;
   try {
-    const m = JSON.parse((await getBuf(UPDATE_BASE + 'manifest.json')).toString('utf8'));
+    // Fråga GitHub direkt efter senaste commit och läs filerna från den (raw-cachen kan ligga efter i flera minuter)
+    let base = UPDATE_BASE, sha = '';
+    if (!process.env.JARVIS_UPDATE_BASE) {
+      try { const r = (await getBuf(SHA_URL)).toString('utf8').trim(); if (/^[a-f0-9]{40}$/.test(r)) { sha = r; base = UPDATE_BASE.replace('/main/', '/' + sha + '/'); } } catch {}
+    }
+    const m = JSON.parse((await getBuf(base + 'manifest.json')).toString('utf8'));
+    if (sha && m.shell && typeof m.shell.url === 'string') m.shell.url = m.shell.url.replace('/jarvis/main/', '/jarvis/' + sha + '/');
     if (!m || !m.version || !m.files || typeof m.files !== 'object') throw new Error('ogiltigt manifest');
     // Ny motor (exe)? Hämtas bredvid nuvarande exe, kontrolleras och startas sedan i stället för den här.
     const sh = m.shell;
@@ -93,7 +100,7 @@ async function checkUpdate(manual) {
     const tmp = path.join(uiRoot(), m.version + '.tmp'), dest = path.join(uiRoot(), m.version);
     fs.rmSync(tmp, { recursive: true, force: true }); fs.mkdirSync(tmp, { recursive: true });
     for (const n of names) {
-      const buf = await getBuf(UPDATE_BASE + n);
+      const buf = await getBuf(base + n);
       if (crypto.createHash('sha256').update(buf).digest('hex') !== m.files[n]) throw new Error('kontrollsumma stämmer inte för ' + n);
       fs.mkdirSync(path.dirname(path.join(tmp, n)), { recursive: true }); fs.writeFileSync(path.join(tmp, n), buf);
     }

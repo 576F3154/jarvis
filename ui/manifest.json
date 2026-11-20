@@ -1,16 +1,16 @@
 {
- "version": "2.4.3",
+ "version": "2.4.4",
  "minShell": "2.1.0",
- "note": "Jag förstår nu även när du skriver artigt, som kan du ändra carlsberg till 14, och frågar hellre än att gissa.",
+ "note": "Jag hämtar nu uppdateringar direkt från källan, så de kommer fram på sekunder i stället för minuter.",
  "files": {
   "index.html": "47ad1978eda7bcf2211bae96675c5b05cf499cf78c5bdafbe3b03abef55680c2",
   "popup.html": "a5fc253fa317621f7fafbf368dcb7a5a9836f154a8c8fd75248c4f2aad77bead",
   "build/icon.png": "7a1c43186a98bde4d4e1beb8cfe0595ac72845720665e4db9bf2ee7d2ace6305"
  },
  "shell": {
-  "version": "2.3.1",
-  "url": "https://raw.githubusercontent.com/576F3154/jarvis/main/shell/Jarvis-2.3.1-portable.exe",
-  "sha256": "5eb2a96d3ad616826840e3ea96dd4f49759dc228a7bcf5b4f1425b5e9faf5338",
-  "note": "Jag förstår nu även när du skriver artigt, som kan du ändra carlsberg till 14, och frågar hellre än att gissa."
+  "version": "2.3.2",
+  "url": "https://raw.githubusercontent.com/576F3154/jarvis/main/shell/Jarvis-2.3.2-portable.exe",
+  "sha256": "4e68fa49df316711d35457a84a19c69d9dce96d5511df9b8ac7854905d34b342",
+  "note": "Jag hämtar nu uppdateringar direkt från källan, så de kommer fram på sekunder i stället för minuter."
  }
 }
