@@ -194,6 +194,7 @@ details summary::-webkit-details-marker{display:none}
   <table>
     <tr><td>vad har jag idag?</td><td>Genomgång av dagen. Även "imorgon", "läget", "status"</td></tr>
     <tr><td>klar med carlsberg</td><td>Bockar av det som matchar</td></tr>
+    <tr><td>ändra carlsberg till 14</td><td>Ny tid (samma dag), eller ny dag: "till imorgon 9", "till fredag". Utan tid byts texten</td></tr>
     <tr><td>skjut upp ica 30 min</td><td>Flyttar. Även "till imorgon 9", "till fredag"</td></tr>
     <tr><td>ta bort avokado</td><td>Tar bort (går att ångra)</td></tr>
     <tr><td>briefing</td><td>Dagens läge i popupen. Kommer annars själv kl 07:30</td></tr>
@@ -491,7 +492,7 @@ function findItem(q, includeDone) {
   for (const i of state.items) {
     if (i.done && !includeDone) continue;
     const tw = norm(i.title + ' ' + (i.raw || ''));
-    let score = 0; for (const w of qw) if (tw.some(t => t.startsWith(w) || (w.length >= 4 && t.includes(w)))) score++;
+    let score = 0; for (const w0 of qw) { const ws = [w0]; if (w0.length >= 5 && w0.endsWith('s')) ws.push(w0.slice(0, -1)); if (ws.some(w => tw.some(t => t.startsWith(w) || (w.length >= 4 && t.includes(w))))) score++; }
     if (score > bestScore || (score === bestScore && score && (i.due || Infinity) < (best.due || Infinity))) { best = i; bestScore = score; }
   }
   return bestScore ? best : null;
@@ -519,7 +520,7 @@ function handle(raw) {
   }
   if (/^(tack|tackar|tusen tack|tack så mycket)\b/.test(low)) { say(fill(pick(L.thanks))); return; }
   if (/^(vem är du|vad är du|vad kan du|vad heter du)/.test(low)) { say(fill(pick(L.who))); return; }
-  if (/^(uppdatera|uppdatering|sök (efter )?uppdatering|finns det (någon )?uppdatering|vilken version|version)/.test(low)) { checkForUpdate(); return; }
+  if (/^(uppdatera|uppdatering|sök (efter )?uppdatering|finns det (någon )?uppdatering|vilken version|version|uppdatera dig|uppdatera jarvis)$/.test(low)) { checkForUpdate(); return; }
   if (/^(byt|ändra) (snabbkommando|kortkommando|genväg)/.test(low)) { openPanel('setPanel'); $('hkBtn').click(); say('Tryck den kombination du vill använda.'); return; }
   if (/^(hjälp|help|\?)$/.test(low)) { say('Här är allt jag kan. Stäng med Esc när du är klar.'); openPanel('helpPanel'); return; }
   if ((x = low.match(/^(?:klar|klart|fixat|gjort|avbocka|bocka av|done)\s+(?:med\s+)?(.+)/))) {
@@ -530,8 +531,27 @@ function handle(raw) {
     const i = findItem(x[1], true); if (!i) { say(fill(pick(L.notFound), { q: x[1] })); return; }
     remove(i); return;
   }
-  if ((x = s.match(/^(?:skjut upp|flytta|senarelägg)\s+(.+)/i))) {
-    const p = parse(x[1]); const i = findItem(p.title); if (!i) { say(fill(pick(L.notFound), { q: p.title })); return; }
+  if ((x = s.match(/^(?:skjut upp|flytta|senarelägg|ändra|byt|uppdatera)\s+(.+)/i))) {
+    const rest = x[1].replace(/\s*(?:påminnelsen|påminnelserna)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+    const m2 = rest.match(/^(.*?)\s+(?:till|på|kl\.?)\s+(.+)$/i);
+    // "ändra carlsberg till 14" / "flytta ica till imorgon 9" / "ändra avokado till ring Orgil om kreditering"
+    if (m2) {
+      const i = findItem(m2[1]); if (!i) { say(fill(pick(L.notFound), { q: m2[1] })); return; }
+      let spec = m2[2].trim().replace(/\s*(?:istället|i stället|iställen)\s*$/i, '');
+      const pure = spec.match(/^(?:kl\.?\s*)?(\d{1,2})(?:[:.](\d{2}))?$/);
+      if (pure && +pure[1] <= 23) {
+        const base = new Date(i.due && i.due > Date.now() - 864e5 ? i.due : Date.now()); base.setHours(+pure[1], +(pure[2] || 0), 0, 0);
+        if (base.getTime() <= Date.now()) base.setDate(base.getDate() + 1);
+        snooze(i, base.getTime(), true); return;
+      }
+      const p = parse(spec.replace(/(^|\s)(\d{1,2})$/, '$1kl $2'));
+      if (p.due && (p.title.length <= 2 || /^(kl|om|imorgon|idag)$/i.test(p.title) || p.title === spec)) { snooze(i, p.due, true); return; }
+      if (p.due) { snooze(i, p.due, true); return; }
+      // ingen tid: byt text
+      const t = byId(i.id) || i; const old = t.title; t.title = spec.charAt(0).toUpperCase() + spec.slice(1); t.raw = spec; t.cat = detectCat(spec); save(); render();
+      say(`Ändrat: "${old}" heter nu "${t.title}".`); return;
+    }
+    const p = parse(rest); const i = findItem(p.title); if (!i) { say(fill(pick(L.notFound), { q: p.title })); return; }
     snooze(i, p.due || Date.now() + 60 * 6e4); return;
   }
   add(s);
@@ -669,9 +689,9 @@ function remove(i) {
   say(fill(pick(L.deleted)));
   toast('🗑 Borttagen', () => { if (!byId(i.id)) state.items.splice(idx, 0, i); save(); render(); });
 }
-function snooze(i, ts) {
+function snooze(i, ts, edit) {
   i = byId(i.id) || i; unqueue(i.id); i.due = ts; i.notified = false; i.warned = false; save(); render();
-  say(fill(pick(L.snooze), { when: lc(fmtWhen(ts)) }));
+  say(edit ? `Ändrat. ${i.title} ligger nu ${lc(fmtWhen(ts))}.` : fill(pick(L.snooze), { when: lc(fmtWhen(ts)) }));
 }
 
 $('addForm').onsubmit = (e) => {
@@ -679,7 +699,7 @@ $('addForm').onsubmit = (e) => {
   userSaid(v); handle(v); $('q').value = ''; $('preview').innerHTML = '';
   if (bridge && fromHotkey && state.settings.quickHide) { fromHotkey = false; setTimeout(() => bridge.hide(), 1400); }
 };
-const CMD = /^(sök|hitta|leta|var är|var ligger|briefing|morgonrapport|veckan|vecka|nästa vecka|veckovy|visa |hej|hallå|hejsan|tjena|tja|tjenare|morrn|god\s|yo\b|vad har jag|vad ska jag|vad händer|läget|status|översikt|hur ser|dagens|briefing|tack|vem är du|vad är du|vad kan du|vad heter du|hjälp|klar\s|klart\s|fixat\s|gjort\s|avbocka|bocka av|done\s|ta bort|radera|stryk|skjut upp|flytta|senarelägg|uppdater|sök efter uppdatering|vilken version|version$)/i;
+const CMD = /^(sök|hitta|leta|var är|var ligger|briefing|morgonrapport|veckan|vecka|nästa vecka|veckovy|visa |hej|hallå|hejsan|tjena|tja|tjenare|morrn|god\s|yo\b|vad har jag|vad ska jag|vad händer|läget|status|översikt|hur ser|dagens|briefing|tack|vem är du|vad är du|vad kan du|vad heter du|hjälp|klar\s|klart\s|fixat\s|gjort\s|avbocka|bocka av|done\s|ta bort|radera|stryk|skjut upp|flytta|senarelägg|ändra|byt |uppdater|sök efter uppdatering|vilken version|version$)/i;
 $('q').oninput = () => {
   const v = $('q').value.trim(); if (!v) { $('preview').innerHTML = ''; return; }
   if (CMD.test(v)) { $('preview').innerHTML = '› kommando till Jarvis'; return; }

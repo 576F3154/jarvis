@@ -1,9 +1,9 @@
 {
- "version": "2.4.1",
+ "version": "2.4.2",
  "minShell": "2.1.0",
- "note": "Fönstret stannar nu kvar efter att du skrivit något. Vill du ha tillbaka att det göms automatiskt finns det under inställningar.",
+ "note": "Nu kan du ändra påminnelser genom att skriva, till exempel: ändra carlsberg till 14, flytta ica till fredag 10 eller ändra avokado till ring Orgil om kreditering.",
  "files": {
-  "index.html": "6fe8c74bb92cb3528d22da540e88ee1dc280e375542e56786b29c58782d05071",
+  "index.html": "22976e9b20f2018232ebdbaa38fd1729890f84aeeb70c33f70952615daa003bb",
   "popup.html": "a5fc253fa317621f7fafbf368dcb7a5a9836f154a8c8fd75248c4f2aad77bead",
   "build/icon.png": "7a1c43186a98bde4d4e1beb8cfe0595ac72845720665e4db9bf2ee7d2ace6305"
  },
@@ -11,6 +11,6 @@
   "version": "2.3.1",
   "url": "https://raw.githubusercontent.com/576F3154/jarvis/main/shell/Jarvis-2.3.1-portable.exe",
   "sha256": "5eb2a96d3ad616826840e3ea96dd4f49759dc228a7bcf5b4f1425b5e9faf5338",
-  "note": "Fönstret stannar nu kvar efter att du skrivit något. Vill du ha tillbaka att det göms automatiskt finns det under inställningar."
+  "note": "Nu kan du ändra påminnelser genom att skriva, till exempel: ändra carlsberg till 14, flytta ica till fredag 10 eller ändra avokado till ring Orgil om kreditering."
  }
 }
