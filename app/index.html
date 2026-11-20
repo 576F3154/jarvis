@@ -497,8 +497,11 @@ function findItem(q, includeDone) {
   }
   return bestScore ? best : null;
 }
+const POLITE = /^(?:(?:hej\s+)?jarvis[,:!]?\s+|kan du\s+|kan du snälla\s+|snälla\s+|skulle du kunna\s+|vill du\s+|jag vill att du\s+|jag vill\s+(?=ändra|flytta|byta|ta bort|skjuta)|du kan\s+|kunde du\s+|kan jag\s+(?=ändra|flytta|ta bort))+/i;
 function handle(raw) {
-  const s = raw.trim(), low = s.toLowerCase().replace(/[?!.]+$/, '').trim();
+  const s0 = raw.trim(), stripped = s0.replace(POLITE, '').trim();
+  // "ändra" → efter "jag vill byta/skjuta" normaliseras verbet
+  const s = (stripped && stripped !== s0 ? stripped.replace(/^byta\b/i, 'byt').replace(/^skjuta upp\b/i, 'skjut upp') : s0).replace(/[?]+$/, '').trim(), low = s.toLowerCase().replace(/[?!.]+$/, '').trim();
   let x;
   if (/^(hej|hallå|hejsan|tjena|tja|tjenare|morrn|god\s+(morgon|dag|kväll|middag)|yo)\b/.test(low) && low.length < 30) {
     say(fill(pick(L.hello), { tod: tod() }) + ' ' + summary('today')); return;
@@ -552,6 +555,7 @@ function handle(raw) {
       say(`Ändrat: "${old}" heter nu "${t.title}".`); return;
     }
     const p = parse(rest); const i = findItem(p.title); if (!i) { say(fill(pick(L.notFound), { q: p.title })); return; }
+    if (!p.due && /^(ändra|byt|uppdatera)/i.test(s)) { say(`Till vad? Skriv till exempel "ändra ${p.title.toLowerCase()} till 14" eller "ändra ${p.title.toLowerCase()} till imorgon 9".`); return; }
     snooze(i, p.due || Date.now() + 60 * 6e4); return;
   }
   add(s);
@@ -702,7 +706,7 @@ $('addForm').onsubmit = (e) => {
 const CMD = /^(sök|hitta|leta|var är|var ligger|briefing|morgonrapport|veckan|vecka|nästa vecka|veckovy|visa |hej|hallå|hejsan|tjena|tja|tjenare|morrn|god\s|yo\b|vad har jag|vad ska jag|vad händer|läget|status|översikt|hur ser|dagens|briefing|tack|vem är du|vad är du|vad kan du|vad heter du|hjälp|klar\s|klart\s|fixat\s|gjort\s|avbocka|bocka av|done\s|ta bort|radera|stryk|skjut upp|flytta|senarelägg|ändra|byt |uppdater|sök efter uppdatering|vilken version|version$)/i;
 $('q').oninput = () => {
   const v = $('q').value.trim(); if (!v) { $('preview').innerHTML = ''; return; }
-  if (CMD.test(v)) { $('preview').innerHTML = '› kommando till Jarvis'; return; }
+  if (CMD.test(v.replace(POLITE, ''))) { $('preview').innerHTML = '› kommando till Jarvis'; return; }
   const p = parse(v);
   $('preview').innerHTML = `${CATS[p.cat].icon} <b>${esc(p.title)}</b> · ${p.due ? (p.deadline ? 'senast ' + lc(fmtWhen(p.due)) : fmtWhen(p.due)) : 'ingen tid'}${p.recur ? ' · 🔁 ' + recurTxt(p.recur) : ''}${p.important ? ' · <b style="color:var(--red)">viktig</b>' : ''}`;
 };
