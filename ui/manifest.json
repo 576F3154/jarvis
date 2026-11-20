@@ -1,16 +1,16 @@
 {
- "version": "2.4.4",
+ "version": "2.5.0",
  "minShell": "2.1.0",
- "note": "Jag hämtar nu uppdateringar direkt från källan, så de kommer fram på sekunder i stället för minuter.",
+ "note": "Papperskorg och dagliga säkerhetskopior, kontakter med telefonnummer som du ringer med ett klick, anteckningar på påminnelser, och jag påminner igen om du inte gör något. Skriv hjälp för de nya kommandona.",
  "files": {
-  "index.html": "47ad1978eda7bcf2211bae96675c5b05cf499cf78c5bdafbe3b03abef55680c2",
-  "popup.html": "a5fc253fa317621f7fafbf368dcb7a5a9836f154a8c8fd75248c4f2aad77bead",
+  "index.html": "da1e447b36421f79805809e6fcd305b86bd153277837d98728a7c193c5bb6bf5",
+  "popup.html": "7ab18625aa4ead744e1cf67ea7285ce618a901530a43e25e3b4f2ca15649c1b0",
   "build/icon.png": "7a1c43186a98bde4d4e1beb8cfe0595ac72845720665e4db9bf2ee7d2ace6305"
  },
  "shell": {
-  "version": "2.3.2",
-  "url": "https://raw.githubusercontent.com/576F3154/jarvis/main/shell/Jarvis-2.3.2-portable.exe",
-  "sha256": "4e68fa49df316711d35457a84a19c69d9dce96d5511df9b8ac7854905d34b342",
-  "note": "Jag hämtar nu uppdateringar direkt från källan, så de kommer fram på sekunder i stället för minuter."
+  "version": "2.3.3",
+  "url": "https://raw.githubusercontent.com/576F3154/jarvis/main/shell/Jarvis-2.3.3-portable.exe",
+  "sha256": "f42589ff38aa68a5c51dba466380f89094065d6a6566ecf89ff46195e35b449f",
+  "note": "Papperskorg och dagliga säkerhetskopior, kontakter med telefonnummer som du ringer med ett klick, anteckningar på påminnelser, och jag påminner igen om du inte gör något. Skriv hjälp för de nya kommandona."
  }
 }

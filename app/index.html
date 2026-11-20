@@ -155,6 +155,16 @@ section.day.past{opacity:.55}
 .item.ghost::before{background:var(--muted);box-shadow:none}
 .sheet textarea{width:100%;min-height:110px;background:#020a12;border:1px solid var(--line2);color:var(--ink);border-radius:8px;padding:7px 9px;font:13px/1.5 var(--mono);resize:vertical}
 .sheet input[type=time]{background:#020a12;border:1px solid var(--line2);color:var(--ink);border-radius:7px;padding:4px 8px;font:inherit;color-scheme:dark}
+.note{font-size:13px;color:#a9cfdc;margin-top:3px;padding:3px 8px;border-left:2px solid var(--line2);background:rgba(62,230,255,.04);border-radius:0 6px 6px 0;word-wrap:break-word;white-space:pre-wrap}
+.tel{display:inline-flex;align-items:center;gap:4px;color:#5dffa8;border:1px solid rgba(93,255,168,.4);background:rgba(93,255,168,.07);border-radius:5px;padding:0 6px;font-family:var(--mono);font-size:11.5px;cursor:pointer;text-decoration:none}
+.tel:hover{background:rgba(93,255,168,.18)}
+.item.due.important{animation:redpulse 1.1s ease-in-out infinite}
+@keyframes redpulse{50%{box-shadow:0 0 0 2px var(--red),0 0 22px rgba(255,77,94,.5)}}
+.trow{display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
+.trow .tt{flex:1;min-width:0;word-wrap:break-word}
+.trow .tm{color:var(--muted);font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+.sheet h4{margin:16px 0 6px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.sheet select{background:#020a12;border:1px solid var(--line2);color:var(--ink);border-radius:7px;padding:4px 8px;font:inherit}
 details summary{cursor:pointer;list-style:none}
 details summary::-webkit-details-marker{display:none}
 @media (prefers-reduced-motion: reduce){*{animation:none!important}}
@@ -199,6 +209,10 @@ details summary::-webkit-details-marker{display:none}
     <tr><td>ta bort avokado</td><td>Tar bort (går att ångra)</td></tr>
     <tr><td>briefing</td><td>Dagens läge i popupen. Kommer annars själv kl 07:30</td></tr>
     <tr><td>veckan / nästa vecka</td><td>Veckovy med alla dagar</td></tr>
+    <tr><td>spara nummer rocklunda 021-12 34 56</td><td>Sparar ett telefonnummer. Visas sedan på alla påminnelser om Rocklunda</td></tr>
+    <tr><td>nummer till rocklunda</td><td>Visar numret. Även "kontakter" för hela listan</td></tr>
+    <tr><td>ring ica 14 -- ordernr 551</td><td>Allt efter -- blir en anteckning. Eller: "anteckning ica: ordernr 551"</td></tr>
+    <tr><td>papperskorg</td><td>Raderade påminnelser sparas i 30 dagar. "återställ avokado" hämtar tillbaka</td></tr>
     <tr><td>sök rocklunda</td><td>Hittar påminnelser som innehåller ordet, även avklarade</td></tr>
     <tr><td>visa carlsberg</td><td>Allt som rör en kund eller leverantör</td></tr>
     <tr><td>uppdatera</td><td>Kollar om det finns en ny version (görs annars varje timme)</td></tr>
@@ -226,11 +240,28 @@ details summary::-webkit-details-marker{display:none}
   </table>
 </div></div>
 
+<div class="panel" id="trashPanel"><div class="sheet hud">
+  <button class="iconbtn close" data-close>✕</button>
+  <h3>Papperskorg &amp; säkerhetskopior</h3>
+  <div id="trashList"></div>
+  <h4>Dagliga säkerhetskopior (7 dagar)</h4>
+  <div id="backupList"></div>
+  <p style="font-size:12px;color:var(--muted);margin:8px 0 0">"Hämta tillbaka" lägger bara till påminnelser som saknas idag. Inget skrivs över.</p>
+</div></div>
+
+<div class="panel" id="contactPanel"><div class="sheet hud">
+  <button class="iconbtn close" data-close>✕</button>
+  <h3>Kontakter</h3>
+  <div id="contactList"></div>
+  <p style="font-size:12px;color:var(--muted);margin:10px 0 0">Lägg till genom att skriva till Jarvis: <i>spara nummer Rocklunda 021-12 34 56</i></p>
+</div></div>
+
 <div class="panel" id="setPanel"><div class="sheet hud">
   <button class="iconbtn close" data-close>✕</button>
   <h3>Inställningar</h3>
   <label><input type="checkbox" id="optPopup"> Popup-fönster överst på skärmen när något ska göras</label>
   <label><input type="checkbox" id="optSound"> Ljud vid påminnelse</label>
+  <label>Påminn igen om jag inte gör något <select id="optNag"><option value="0">Aldrig</option><option value="5">efter 5 min</option><option value="10">efter 10 min</option><option value="15">efter 15 min</option><option value="30">efter 30 min</option></select></label>
   <label><input type="checkbox" id="optVoice"> Jarvis läser upp påminnelser (Windows röst)</label>
   <label id="autoRow"><input type="checkbox" id="optAuto"> Starta med Windows</label>
   <label><input type="checkbox" id="optQuickHide"> Göm fönstret automatiskt efter Enter när det öppnats med snabbkommandot</label>
@@ -245,6 +276,8 @@ details summary::-webkit-details-marker{display:none}
   <button class="chip" id="importBtn">Importera</button>
   <button class="chip" id="clearDone">Rensa avklarade</button>
   <button class="chip" id="testPop">Testa popup</button>
+  <button class="chip" id="trashBtn">🗑 Papperskorg &amp; kopior</button>
+  <button class="chip" id="contactBtn">📇 Kontakter</button>
   <p style="margin:14px 0 6px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)">Version</p>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span id="verTxt" style="font-family:var(--mono);font-size:12.5px;color:var(--muted)">–</span><button class="chip" id="updBtn">Sök efter uppdatering</button></div>
   <label><input type="checkbox" id="optAutoUpd"> Uppdatera automatiskt (kollar var 10:e minut)</label>
@@ -283,7 +316,8 @@ const PALETTE = ['#3ee6ff', '#ffb547', '#5dffa8', '#ff7ab6', '#b48cff', '#7aa8ff
 const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 let custCache = { key: '', list: [] };
 function customers() {
-  const names = Array.isArray(state.settings.customers) ? state.settings.customers : DEFAULT_CUSTOMERS;
+  const base = Array.isArray(state.settings.customers) ? state.settings.customers : DEFAULT_CUSTOMERS;
+  const names = [...base, ...Object.keys(state.contacts || {}).filter(n => !base.some(b => b.toLowerCase() === n.toLowerCase()))];
   const key = names.join('|'); if (custCache.key === key) return custCache.list;
   const list = names.map(n => n.trim()).filter(Boolean).map(n => {
     let h = 0; for (const ch of n.toLowerCase()) h = (h * 31 + ch.codePointAt(0)) >>> 0;
@@ -291,7 +325,7 @@ function customers() {
   }).sort((a, b) => b.name.length - a.name.length);
   custCache = { key, list }; return list;
 }
-function custOf(i) { const t = (i.title || '') + ' ' + (i.raw || ''); return customers().find(c => c.re.test(t)) || null; }
+function custOf(i) { const t = (i.title || '') + ' ' + (i.raw || '') + ' ' + (i.note || ''); return customers().find(c => c.re.test(t)) || null; }
 const normS = (t) => String(t || '').toLowerCase();
 const matchF = (i) => filter === 'all' || i.cat === filter || (filter.startsWith('k:') && (custOf(i) || {}).name === filter.slice(2))
   || (filter.startsWith('q:') && hitQ(i, qWords(filter.slice(2))));
@@ -473,7 +507,7 @@ function summary(which = 'today') {
 /* ---------- Sök ---------- */
 const SEARCH_FILL = new Set(['upp', 'efter', 'påminnelsen', 'påminnelserna', 'påminnelse', 'om', 'med', 'den', 'det', 'min', 'mina', 'till', 'för', 'på', 'i']);
 const qWords = (q) => normS(q).replace(/[^\p{L}\p{N}\s-]/gu, ' ').split(/\s+/).filter(w => w && !SEARCH_FILL.has(w));
-const hitQ = (i, ws) => { const t = normS(i.title + ' ' + (i.raw || '')); return ws.length && ws.every(w => t.includes(w)); };
+const hitQ = (i, ws) => { const t = normS(i.title + ' ' + (i.raw || '') + ' ' + (i.note || '')); return ws.length && ws.every(w => t.includes(w)); };
 function search(q) {
   const ws = qWords(q); q = ws.join(' ') || q.trim();
   const hits = state.items.filter(i => hitQ(i, ws)).sort((a, b) => a.done - b.done || (b.due || b.created) - (a.due || a.created));
@@ -491,7 +525,7 @@ function findItem(q, includeDone) {
   let best = null, bestScore = 0;
   for (const i of state.items) {
     if (i.done && !includeDone) continue;
-    const tw = norm(i.title + ' ' + (i.raw || ''));
+    const tw = norm(i.title + ' ' + (i.raw || '') + ' ' + (i.note || ''));
     let score = 0; for (const w0 of qw) { const ws = [w0]; if (w0.length >= 5 && w0.endsWith('s')) ws.push(w0.slice(0, -1)); if (ws.some(w => tw.some(t => t.startsWith(w) || (w.length >= 4 && t.includes(w))))) score++; }
     if (score > bestScore || (score === bestScore && score && (i.due || Infinity) < (best.due || Infinity))) { best = i; bestScore = score; }
   }
@@ -526,6 +560,26 @@ function handle(raw) {
   if (/^(uppdatera|uppdatering|sök (efter )?uppdatering|finns det (någon )?uppdatering|vilken version|version|uppdatera dig|uppdatera jarvis)$/.test(low)) { checkForUpdate(); return; }
   if (/^(byt|ändra) (snabbkommando|kortkommando|genväg)/.test(low)) { openPanel('setPanel'); $('hkBtn').click(); say('Tryck den kombination du vill använda.'); return; }
   if (/^(hjälp|help|\?)$/.test(low)) { say('Här är allt jag kan. Stäng med Esc när du är klar.'); openPanel('helpPanel'); return; }
+  if ((x = s.match(/^(?:spara|lägg (?:till|in)|lägg in)\s+(?:nummer|numret|telefon(?:nummer)?|tel(?:\.|efonnr)?|nr)\s+(?:till|för|på|hos)?\s*(.+?)\s*[:=,]?\s*((?:\+46|0)[\d\s-]{5,16}\d)\s*$/i))) { saveContact(x[1].trim(), x[2]); return; }
+  if ((x = low.match(/^(?:vad är|vilket är|ge mig|visa)?\s*(?:numret|nummer|telefonnummer|telefonnumret|tel)\s+(?:till|för|på|hos)\s+(.+)$/)) || (x = low.match(/^(.+?)s?\s+(?:nummer|telefonnummer|nr)$/))) {
+    const q = x[1].trim(); const c = state.contacts || {};
+    const k = Object.keys(c).find(n => n.toLowerCase() === q || n.toLowerCase().startsWith(q) || q.startsWith(n.toLowerCase()) || n.toLowerCase().includes(q));
+    if (k && c[k].phone) { say(`${k}: ${c[k].phone}. Klicka på numret i listan för att ringa.`); return; }
+    const it = state.items.concat(state.trash || []).find(i => hitQ(i, qWords(q)) && (((i.raw || '') + ' ' + (i.note || '')).match(PHONE_RE)));
+    if (it) { const num = fmtPhone(((it.raw || '') + ' ' + (it.note || '')).match(PHONE_RE)[0]); say(`Jag hittade ${num} i påminnelsen "${it.title}". Skriv "spara nummer ${q} ${num}" så kommer jag ihåg det.`); return; }
+    say(`Jag har inget nummer till ${q}. Skriv "spara nummer ${q} 021-…" när du har det.`); return;
+  }
+  if (/^(kontakter|kontaktlista|visa kontakter|telefonbok)$/.test(low)) { const n = Object.keys(state.contacts || {}).length; say(n ? `Du har ${n} kontakter sparade.` : 'Inga kontakter än. Skriv till exempel "spara nummer Rocklunda 021-12 34 56".'); openContacts(); return; }
+  if ((x = low.match(/^(?:ta bort|radera)\s+(?:numret|nummer)\s+(?:till|för)?\s*(.+)$/))) { const k = Object.keys(state.contacts || {}).find(n => n.toLowerCase().includes(x[1].trim())); if (k) { delete state.contacts[k]; custCache.key = ''; save(); render(); say('Numret till ' + k + ' är borttaget.'); } else say('Hittar ingen kontakt som heter ' + x[1] + '.'); return; }
+  if (/^(papperskorg|papperskorgen|visa papperskorg(en)?|raderade|borttagna|säkerhetskopior|backup)$/.test(low)) { const n = (state.trash || []).length; say(n ? `${n} i papperskorgen. Klicka på "Återställ" för den du vill ha tillbaka.` : 'Papperskorgen är tom. Säkerhetskopiorna finns längre ned.'); openTrash(); return; }
+  if ((x = low.match(/^(?:återställ|ångra raderingen av|hämta tillbaka)\s+(.+)$/))) {
+    const ws = qWords(x[1]); const t = (state.trash || []).find(t => hitQ(t, ws));
+    if (t) restoreFromTrash(t); else say('Jag hittar inget i papperskorgen som matchar "' + x[1] + '". Skriv "papperskorg" för att se allt.'); return;
+  }
+  if ((x = s.match(/^(?:anteckning|notera|lägg till anteckning|anteckna)\s+(?:på|till|för|om)?\s*(.+?)\s*[:–-]\s+(.+)$/i))) {
+    const i = findItem(x[1]); if (!i) { say(fill(pick(L.notFound), { q: x[1] })); return; }
+    i.note = i.note ? i.note + ' · ' + x[2].trim() : x[2].trim(); save(); render(); say('Anteckning sparad på ' + i.title + '.'); return;
+  }
   if ((x = low.match(/^(?:klar|klart|fixat|gjort|avbocka|bocka av|done)\s+(?:med\s+)?(.+)/))) {
     const i = findItem(x[1]); if (!i) { say(fill(pick(L.notFound), { q: x[1] })); return; }
     complete(i, true); return;
@@ -581,15 +635,17 @@ function itemHTML(i) {
   const now = Date.now(), soon = i.due && !i.done && i.due > now && i.due - now < 30 * 60000;
   const left = i.due && !i.done ? fmtLeft(i.due) : '';
   const cat = CATS[i.cat] || CATS.annat;
-  return `<div class="item ${i.done ? 'done' : ''} ${i.due && !i.done && i.due <= now ? 'due' : ''} ${soon ? 'soon' : ''}" data-id="${esc(i.id)}">
+  const tel = phoneOf(i);
+  return `<div class="item ${i.done ? 'done' : ''} ${i.due && !i.done && i.due <= now ? 'due' : ''} ${soon ? 'soon' : ''} ${i.important ? 'important' : ''}" data-id="${esc(i.id)}">
     <button class="check" data-act="done" title="Klar">✓</button>
     <span class="cat" title="${cat.label}">${cat.icon}</span>
     <div class="body">
       <div class="txt" data-act="edit">${i.important ? '<span class="imp">! </span>' : ''}${esc(i.title)}</div>
       <div class="meta">${i.due ? `<span class="when">${i.deadline ? 'Senast ' + lc(fmtWhen(i.due)) : fmtWhen(i.due)}</span>` : ''}
-        ${left ? `<span>${left}</span>` : ''}${i.deadline ? '<span class="tag">STOPPTID</span>' : ''}${i.recur ? `<span>🔁 ${recurTxt(i.recur)}</span>` : ''}${custTag(i)}</div>
+        ${left ? `<span>${left}</span>` : ''}${i.deadline ? '<span class="tag">STOPPTID</span>' : ''}${i.recur ? `<span>🔁 ${recurTxt(i.recur)}</span>` : ''}${custTag(i)}${tel ? `<a class="tel" data-tel="${esc(tel)}" title="Ring">📞 ${esc(tel)}</a>` : ''}</div>
+      ${i.note ? `<div class="note">${esc(i.note)}</div>` : ''}
     </div>
-    <div class="acts">${i.done ? '' : '<button data-act="snooze" title="Skjut upp">⏰</button>'}<button data-act="del" title="Ta bort">🗑</button></div>
+    <div class="acts">${i.done ? '' : '<button data-act="snooze" title="Skjut upp">⏰</button>'}<button data-act="note" title="Anteckning">📝</button><button data-act="del" title="Ta bort">🗑</button></div>
   </div>`;
 }
 let weekOff = 0;
@@ -660,9 +716,34 @@ function toast(msg, undoFn) {
 $('toastUndo').onclick = () => { if (undo) undo(); undo = null; $('toast').style.display = 'none'; };
 const byId = (id) => state.items.find(i => i.id === id);
 
+const PHONE_RE = /(?<![\d])(?:\+46[\s-]?|0)\d{1,3}(?:[\s-]?\d){5,9}(?![\d])/;
+const PHONE_RE_G = new RegExp(PHONE_RE.source, 'g');
+const fmtPhone = (s) => s.trim().replace(/\s+/g, ' ');
+function phoneOf(i) {
+  const m = ((i.raw || '') + ' ' + (i.title || '') + ' ' + (i.note || '')).match(PHONE_RE); if (m) return fmtPhone(m[0]);
+  const c = custOf(i); const k = c && state.contacts && Object.keys(state.contacts).find(n => n.toLowerCase() === c.name.toLowerCase());
+  return k && state.contacts[k].phone ? state.contacts[k].phone : '';
+}
+function saveContact(name, phone, quiet) {
+  state.contacts = state.contacts || {};
+  const key = Object.keys(state.contacts).find(n => n.toLowerCase() === name.toLowerCase()) || name.trim().replace(/^./, c => c.toUpperCase());
+  state.contacts[key] = { ...(state.contacts[key] || {}), phone: fmtPhone(phone) };
+  custCache.key = ''; save(); render();
+  if (!quiet) say(`Sparat: ${key}, ${fmtPhone(phone)}. Numret visas nu på alla påminnelser om ${key}.`);
+  return key;
+}
 function add(raw) {
-  const p = parse(raw);
+  let note = '';
+  const ns = raw.split(/\s+(?:--|\/\/)\s+/); if (ns.length > 1) { raw = ns.shift(); note = ns.join(' – ').trim(); }
+  const phones = []; const masked = raw.replace(PHONE_RE_G, (m) => { phones.push(m); return ' §' + (phones.length - 1) + '§ '; });
+  const p = parse(masked);
+  p.title = p.title.replace(/§(\d+)§/g, (_, k) => phones[+k].trim()).replace(/\s+/g, ' ').trim();
   const item = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), raw, ...p, done: false, notified: false, created: Date.now() };
+  if (note) item.note = note;
+  if (phones.length) { const c = custOf(item); const has = c && state.contacts && Object.keys(state.contacts).some(n => n.toLowerCase() === c.name.toLowerCase() && state.contacts[n].phone);
+    if (c && !has) { saveContact(c.name, phones[0], true); setTimeout(() => say(`Jag sparade också numret till ${c.name} i kontakterna.`), 60); }
+    else if (!c) { const g = (p.title.replace(/^./, c => c.toLowerCase()).match(/^(?:ring|ringa|mejla|maila|kontakta|kolla med)\s+([\p{Lu}][\p{L}&-]+(?:\s+[\p{Lu}][\p{L}&-]+)?)/u) || [])[1];
+      setTimeout(() => say(`Jag såg ett telefonnummer. Skriv "spara nummer ${g || 'namn'} ${fmtPhone(phones[0])}" så visar jag det automatiskt på alla påminnelser om ${g || 'dem'}.`), 60); } }
   state.items.push(item); save(); render();
   const when = p.due ? (p.deadline ? lc(fmtWhen(p.due)) : lc(fmtWhen(p.due))) : '';
   let line = fill(pick(!p.due ? L.addedNone : p.deadline ? L.addedDl : L.added), { when });
@@ -677,7 +758,7 @@ function complete(i, talk = true) {
   if (i.recur && i.due) {
     const copy = { ...i, id: i.id + 'd' + Date.now().toString(36), done: true, doneAt: Date.now() };
     state.items.push(copy);
-    i.due = nextRecur(i.due, i.recur); i.notified = false; i.warned = false;
+    i.due = nextRecur(i.due, i.recur); i.notified = false; i.warned = false; i.nags = 0; delete i.lastAlert;
     if (talk) say(fill(pick(L.doneRecur), { when: lc(fmtWhen(i.due)) }));
     toast('✓ Klart. Nästa: ' + fmtWhen(i.due), () => { state.items = state.items.filter(x => x.id !== copy.id); const c = byId(prev.id); if (c) Object.assign(c, prev); save(); render(); });
   } else {
@@ -689,12 +770,60 @@ function complete(i, talk = true) {
 }
 function remove(i) {
   unqueue(i.id);
-  const idx = state.items.indexOf(i); state.items.splice(idx, 1); save(); render();
-  say(fill(pick(L.deleted)));
-  toast('🗑 Borttagen', () => { if (!byId(i.id)) state.items.splice(idx, 0, i); save(); render(); });
+  const idx = state.items.indexOf(i); state.items.splice(idx, 1);
+  state.trash = state.trash || []; state.trash.unshift({ ...i, deletedAt: Date.now() }); if (state.trash.length > 300) state.trash.length = 300;
+  save(); render();
+  say('Flyttat till papperskorgen. Där ligger det i 30 dagar, skriv "papperskorg" om du ångrar dig.');
+  toast('🗑 Borttagen', () => { if (!byId(i.id)) state.items.splice(idx, 0, i); state.trash = (state.trash || []).filter(t => t.id !== i.id); save(); render(); });
+}
+function restoreFromTrash(t) {
+  state.trash = (state.trash || []).filter(x => x !== t);
+  const { deletedAt, ...item } = t; item.notified = item.due ? item.due <= Date.now() : false;
+  if (!byId(item.id)) state.items.push(item);
+  save(); render(); say('Återställt: ' + item.title + (item.due ? ' (' + lc(fmtWhen(item.due)) + ')' : '') + '.');
+  if ($('trashPanel').classList.contains('open')) openTrash();
+}
+async function openTrash() {
+  const tr = state.trash || [];
+  $('trashList').innerHTML = tr.length ? tr.slice(0, 60).map((t, k) => `<div class="trow"><span class="tt">${esc(t.title)}${t.note ? ' <span style="color:var(--muted)">– ' + esc(t.note) + '</span>' : ''}</span><span class="tm">${new Date(t.deletedAt).toLocaleDateString('sv-SE')}</span><button class="chip" data-restore="${k}">Återställ</button></div>`).join('') : '<p class="none">Papperskorgen är tom.</p>';
+  if (bridge && bridge.listBackups) {
+    const bl = await bridge.listBackups();
+    $('backupList').innerHTML = bl.length ? bl.map(b => `<div class="trow"><span class="tt">${b.date}</span><span class="tm">${b.count} st</span><button class="chip" data-backup="${b.date}">Hämta tillbaka</button></div>`).join('') : '<p class="none">Första kopian görs vid nästa ändring.</p>';
+  } else $('backupList').innerHTML = '<p class="none">Kommer med nästa motoruppdatering.</p>';
+  openPanel('trashPanel');
+}
+$('trashList').onclick = (e) => { const b = e.target.closest('[data-restore]'); if (b) { const t = (state.trash || [])[+b.dataset.restore]; if (t) restoreFromTrash(t); } };
+$('backupList').onclick = async (e) => {
+  const b = e.target.closest('[data-backup]'); if (!b || !bridge.readBackup) return;
+  const d = await bridge.readBackup(b.dataset.backup); if (!d || !Array.isArray(d.items)) { say('Kunde inte läsa den kopian.'); return; }
+  const have = new Set(state.items.map(i => i.id)), missing = d.items.filter(i => !have.has(i.id) && !i.done);
+  if (!missing.length) { say('Allt från ' + b.dataset.backup + ' finns redan kvar. Inget att hämta.'); return; }
+  state.items.push(...missing); save(); render();
+  say(`Hämtade tillbaka ${missing.length} från ${b.dataset.backup}: ` + missing.slice(0, 4).map(i => i.title).join(', ') + (missing.length > 4 ? ' med flera.' : '.'));
+};
+function openContacts() {
+  const c = state.contacts || {}, ks = Object.keys(c).sort((a, b) => a.localeCompare(b, 'sv'));
+  $('contactList').innerHTML = ks.length ? ks.map(k => `<div class="trow"><span class="tt">${esc(k)}</span>${c[k].phone ? `<a class="tel" data-tel="${esc(c[k].phone)}">📞 ${esc(c[k].phone)}</a>` : ''}<button class="chip" data-delc="${esc(k)}">Ta bort</button></div>`).join('') : '<p class="none">Inga kontakter än.</p>';
+  openPanel('contactPanel');
+}
+$('contactList').onclick = (e) => { const b = e.target.closest('[data-delc]'); if (b) { delete state.contacts[b.dataset.delc]; custCache.key = ''; save(); render(); openContacts(); } };
+function callNumber(num) {
+  if (bridge && bridge.call) { bridge.call(num); say('Ringer ' + num + '…'); return; }
+  try { navigator.clipboard.writeText(num); } catch {}
+  say('Numret ' + num + ' är kopierat. (Direktsamtal kommer med nästa motoruppdatering.)');
+}
+document.addEventListener('click', (e) => { const t = e.target.closest('.tel'); if (t) { e.preventDefault(); e.stopPropagation(); callNumber(t.dataset.tel); } }, true);
+function editNote(i, el) {
+  const body = el.querySelector('.body'); if (!body || body.querySelector('.edit.notein')) return;
+  const inp = document.createElement('input'); inp.className = 'edit notein'; inp.placeholder = 'Anteckning… (Enter sparar, Esc avbryter)'; inp.value = i.note || ''; inp.style.marginTop = '4px';
+  body.appendChild(inp); inp.focus();
+  let fin = false;
+  const finish = (ok) => { if (fin) return; fin = true; if (ok) { const v = inp.value.trim(); const t = byId(i.id) || i; if (v) t.note = v; else delete t.note; save(); if (v !== (i.note || '')) say(v ? 'Anteckning sparad på ' + t.title + '.' : 'Anteckningen borttagen.'); } render(); };
+  inp.onkeydown = (ev) => { if (ev.key === 'Enter') finish(true); if (ev.key === 'Escape') finish(false); };
+  inp.onblur = () => finish(true);
 }
 function snooze(i, ts, edit) {
-  i = byId(i.id) || i; unqueue(i.id); i.due = ts; i.notified = false; i.warned = false; save(); render();
+  i = byId(i.id) || i; unqueue(i.id); i.due = ts; i.notified = false; i.warned = false; i.nags = 0; delete i.lastAlert; save(); render();
   say(edit ? `Ändrat. ${i.title} ligger nu ${lc(fmtWhen(ts))}.` : fill(pick(L.snooze), { when: lc(fmtWhen(ts)) }));
 }
 
@@ -703,7 +832,7 @@ $('addForm').onsubmit = (e) => {
   userSaid(v); handle(v); $('q').value = ''; $('preview').innerHTML = '';
   if (bridge && fromHotkey && state.settings.quickHide) { fromHotkey = false; setTimeout(() => bridge.hide(), 1400); }
 };
-const CMD = /^(sök|hitta|leta|var är|var ligger|briefing|morgonrapport|veckan|vecka|nästa vecka|veckovy|visa |hej|hallå|hejsan|tjena|tja|tjenare|morrn|god\s|yo\b|vad har jag|vad ska jag|vad händer|läget|status|översikt|hur ser|dagens|briefing|tack|vem är du|vad är du|vad kan du|vad heter du|hjälp|klar\s|klart\s|fixat\s|gjort\s|avbocka|bocka av|done\s|ta bort|radera|stryk|skjut upp|flytta|senarelägg|ändra|byt |uppdater|sök efter uppdatering|vilken version|version$)/i;
+const CMD = /^(spara (nummer|numret|tel)|lägg (till|in) (nummer|numret)|numret|nummer till|telefonnummer|kontakter|telefonbok|papperskorg|raderade|säkerhetskopior|återställ|hämta tillbaka|anteckning|notera|anteckna|sök|hitta|leta|var är|var ligger|briefing|morgonrapport|veckan|vecka|nästa vecka|veckovy|visa |hej|hallå|hejsan|tjena|tja|tjenare|morrn|god\s|yo\b|vad har jag|vad ska jag|vad händer|läget|status|översikt|hur ser|dagens|briefing|tack|vem är du|vad är du|vad kan du|vad heter du|hjälp|klar\s|klart\s|fixat\s|gjort\s|avbocka|bocka av|done\s|ta bort|radera|stryk|skjut upp|flytta|senarelägg|ändra|byt |uppdater|sök efter uppdatering|vilken version|version$)/i;
 $('q').oninput = () => {
   const v = $('q').value.trim(); if (!v) { $('preview').innerHTML = ''; return; }
   if (CMD.test(v.replace(POLITE, ''))) { $('preview').innerHTML = '› kommando till Jarvis'; return; }
@@ -716,7 +845,7 @@ $('lists').addEventListener('click', (e) => {
   const el = b.closest('.item'); if (!el || !el.dataset.id) return;
   const i = byId(el.dataset.id); if (!i) return;
   const a = b.dataset.act;
-  if (a === 'done') complete(i); else if (a === 'del') remove(i); else if (a === 'snooze') openSnooze(i, b);
+  if (a === 'done') complete(i); else if (a === 'del') remove(i); else if (a === 'snooze') openSnooze(i, b); else if (a === 'note') editNote(i, el);
 });
 $('lists').addEventListener('dblclick', (e) => {
   const txt = e.target.closest('.txt'); if (!txt) return;
@@ -757,6 +886,8 @@ function openSnooze(i, anchor) {
   menu.onclick = (e) => { const b = e.target.closest('[data-k]'); if (b) { snooze(i, opts[+b.dataset.k][1]); menu.hidden = true; } };
 }
 document.addEventListener('mousedown', (e) => { if (!e.target.closest('#menu') && !e.target.closest('[data-act="snooze"]')) $('menu').hidden = true; });
+$('trashBtn').onclick = () => { $('setPanel').classList.remove('open'); openTrash(); };
+$('contactBtn').onclick = () => { $('setPanel').classList.remove('open'); openContacts(); };
 
 /* ---------- Kortkommandon ---------- */
 let fromHotkey = false;
@@ -779,7 +910,7 @@ function pushPopup() {
     if (q.kind === 'brief') { if (briefData) rows.push({ id: 'brief', kind: 'brief', title: 'Dagens läge', lines: briefData.lines, more: briefData.more, line: briefData.line }); else popQ.delete(key); continue; }
     const i = byId(q.id); if (!i || i.done) { popQ.delete(key); continue; }
     const cat = CATS[i.cat] || CATS.annat;
-    rows.push({ id: key, icon: cat.icon, title: i.title, important: !!i.important, kind: q.kind,
+    rows.push({ id: key, icon: cat.icon, title: i.title, important: !!i.important, kind: q.kind, tel: phoneOf(i), note: i.note || '', nags: i.nags || 0,
       when: q.kind === 'warn' ? 'STOPPTID ' + fmtWhen(i.due) + ' · ' + fmtLeft(i.due) : (i.deadline ? 'STOPPTID – ' : '') + fmtWhen(i.due) + (fmtLeft(i.due) && fmtLeft(i.due) !== 'nu' ? ' · ' + fmtLeft(i.due) : '') });
   }
   rows.sort((a, b) => (b.kind === 'brief') - (a.kind === 'brief'));
@@ -799,6 +930,7 @@ if (bridge && bridge.onPopupAction) {
     if (a.act === 'done') complete(i);
     else if (a.act === 'snooze') snooze(i, Date.now() + (a.mins || 10) * 6e4);
     else if (a.act === 'tomorrow') snooze(i, atClock(8, 0, 1));
+    else if (a.act === 'call') { const t = phoneOf(i); if (t) callNumber(t); }
   });
   bridge.onPopupDismissed(() => popQ.clear());
 }
@@ -822,6 +954,7 @@ function sysNotify(title, body) {
 }
 function alertFor(i, kind) {
   const cat = CATS[i.cat] || CATS.annat;
+  if (kind === 'due') { i.lastAlert = Date.now(); }
   if (state.settings.popup && bridge) { popQ.set(kind === 'warn' ? i.id + ':w' : i.id, { id: i.id, kind }); }
   else sysNotify((kind === 'warn' ? '⏳ 15 min kvar: ' : cat.icon + ' ') + i.title, (i.deadline ? 'STOPPTID – ' : '') + fmtWhen(i.due));
 }
@@ -836,6 +969,16 @@ function tick() {
     if (i.done || !i.due) continue;
     if (i.due <= Date.now() && !i.notified) { i.notified = true; alertFor(i, 'due'); fired.push(i); }
     else if (i.deadline && !i.warned && i.due > Date.now() && i.due - Date.now() <= 15 * 6e4) { i.warned = true; alertFor(i, 'warn'); fired.push(i); }
+  }
+  // Envis: ignorerade påminnelser kommer tillbaka (högst 12 gånger)
+  const nag = Number(state.settings.nag ?? 10);
+  if (nag > 0 && state.settings.popup && bridge) {
+    const again = state.items.filter(i => !i.done && i.due && i.due <= Date.now() && i.notified && !popQ.has(i.id) && (i.nags || 0) < 12 && Date.now() - (i.lastAlert || i.due) >= nag * 6e4);
+    if (again.length) {
+      for (const i of again) { i.nags = (i.nags || 0) + 1; alertFor(i, 'due'); }
+      chime(); save(); pushPopup(); if (bridge) bridge.flash();
+      say((again.length > 1 ? again.length + ' saker väntar fortfarande' : again[0].title + ' väntar fortfarande') + '. Jag släpper det inte.');
+    }
   }
   if (fired.length) {
     chime(); save(); pushPopup();
@@ -975,6 +1118,7 @@ function bindSettings() {
   $('optSound').onchange = (e) => { st.sound = e.target.checked; save(); if (e.target.checked) chime(); };
   $('optPopup').onchange = (e) => { st.popup = e.target.checked; save(); try { if (!st.popup && Notification.permission === 'default') Notification.requestPermission(); } catch {} };
   $('optVoice').onchange = (e) => { st.voice = e.target.checked; save(); if (st.voice) speak(fill('Röstmodul aktiverad, {a}.')); };
+  $('optNag').value = String(st.nag ?? 10); $('optNag').onchange = (e) => { st.nag = Number(e.target.value); save(); say(st.nag ? 'Jag påminner igen efter ' + st.nag + ' minuter om du inte gör något.' : 'Okej, en påminnelse räcker.'); };
   $('optQuickHide').checked = !!st.quickHide; $('optQuickHide').onchange = (e) => { st.quickHide = e.target.checked; save(); };
   $('optBrief').checked = st.brief !== false; $('optBriefTime').value = st.briefTime || '07:30';
   $('optBrief').onchange = (e) => { st.brief = e.target.checked; save(); };
@@ -1005,6 +1149,8 @@ function bindSettings() {
 
 (async function init() {
   await load();
+  state.trash = (state.trash || []).filter(t => Date.now() - (t.deletedAt || 0) < 30 * 864e5);
+  state.contacts = state.contacts || {};
   if (!state.settings.addrV2) { if ((state.settings.address || '').toLowerCase() === 'sir') state.settings.address = ''; state.settings.addrV2 = 1; }
   bindSettings();
   const n = state.items.filter(i => !i.done).length;

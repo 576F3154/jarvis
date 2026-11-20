@@ -22,5 +22,8 @@ contextBridge.exposeInMainWorld('api', {
   applyShell: () => ipcRenderer.send('apply-shell'),
   onShellReady: (cb) => ipcRenderer.on('shell-ready', (_e, info) => cb(info)),
   onShellFailed: (cb) => ipcRenderer.on('shell-failed', () => cb()),
-  onDataChanged: (cb) => ipcRenderer.on('data-changed', (_e, d) => cb(d))
+  onDataChanged: (cb) => ipcRenderer.on('data-changed', (_e, d) => cb(d)),
+  listBackups: () => ipcRenderer.invoke('backups-list'),
+  readBackup: (date) => ipcRenderer.invoke('backup-read', String(date)),
+  call: (num) => ipcRenderer.send('call', String(num))
 });

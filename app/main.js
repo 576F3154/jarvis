@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, nativeImage, screen, net } = require('electron');
+const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, nativeImage, screen, net, shell } = require('electron');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
@@ -48,7 +48,7 @@ function showWin(focusInput) {
    Filerna laddas ner till %APPDATA%\Kom ihåg\ui\<version>\, kontrolleras mot sha256 och används sedan.
    Går något fel används den inbyggda versionen. Själva motorn (main.js/preload) uppdateras inte här. */
 const UPDATE_BASE = process.env.JARVIS_UPDATE_BASE || 'https://raw.githubusercontent.com/576F3154/jarvis/main/ui/';
-const BUNDLED_UI = '2.4.3';
+const BUNDLED_UI = '2.5.0';
 const SHA_URL = 'https://api.github.com/repos/576F3154/jarvis/commits/main';
 const SAFE_NAME = /^(?!.*\.\.)[a-z0-9_\-]+(\/[a-z0-9_\-]+)*\.(html|css|js|png|svg|json|mp3|wav)$/i;
 const uiRoot = () => path.join(app.getPath('userData'), 'ui');
@@ -305,11 +305,42 @@ app.on('will-quit', () => globalShortcut.unregisterAll());
 /* ---------- Lagring & övrigt ---------- */
 ipcMain.handle('load', () => { try { return JSON.parse(fs.readFileSync(dataFile(), 'utf8')); } catch { return null; } });
 let lastWritten = '';
+/* Daglig säkerhetskopia: backups/data-ÅÅÅÅ-MM-DD.json, de 7 senaste dagarna sparas */
+const backupDir = () => path.join(app.getPath('userData'), 'backups');
+const isoDay = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+function dailyBackup(f) {
+  try {
+    if (!fs.existsSync(f)) return;
+    fs.mkdirSync(backupDir(), { recursive: true });
+    const target = path.join(backupDir(), 'data-' + isoDay() + '.json');
+    if (!fs.existsSync(target)) fs.copyFileSync(f, target);
+    const all = fs.readdirSync(backupDir()).filter(n => /^data-\d{4}-\d{2}-\d{2}\.json$/.test(n)).sort();
+    for (const n of all.slice(0, Math.max(0, all.length - 7))) fs.rmSync(path.join(backupDir(), n), { force: true });
+  } catch {}
+}
+ipcMain.handle('backups-list', () => {
+  try {
+    return fs.readdirSync(backupDir()).filter(n => /^data-\d{4}-\d{2}-\d{2}\.json$/.test(n)).sort().reverse().map(n => {
+      let count = 0; try { count = (JSON.parse(fs.readFileSync(path.join(backupDir(), n), 'utf8')).items || []).length; } catch {}
+      return { date: n.slice(5, 15), count };
+    });
+  } catch { return []; }
+});
+ipcMain.handle('backup-read', (_e, date) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return null;
+  try { return JSON.parse(fs.readFileSync(path.join(backupDir(), 'data-' + date + '.json'), 'utf8')); } catch { return null; }
+});
+/* Ring: öppnar tel:-länken i Windows (Teams, telefonlänk eller annan app som hanterar samtal) */
+ipcMain.on('call', (_e, num) => {
+  const n = String(num || '').replace(/[^\d+]/g, '');
+  if (/^\+?\d{6,15}$/.test(n)) shell.openExternal('tel:' + n).catch(() => {});
+});
 ipcMain.handle('save', (_e, data) => {
   const f = dataFile(), json = JSON.stringify(data, null, 1);
   lastWritten = json;
   fs.mkdirSync(path.dirname(f), { recursive: true });
   try { if (fs.existsSync(f)) fs.copyFileSync(f, f + '.bak'); } catch {}
+  dailyBackup(f);
   fs.writeFileSync(f + '.tmp', json); fs.renameSync(f + '.tmp', f);
   return true;
 });
