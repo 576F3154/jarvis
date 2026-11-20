@@ -1,9 +1,9 @@
 {
- "version": "2.5.0",
+ "version": "2.5.1",
  "minShell": "2.1.0",
- "note": "Papperskorg och dagliga säkerhetskopior, kontakter med telefonnummer som du ringer med ett klick, anteckningar på påminnelser, och jag påminner igen om du inte gör något. Skriv hjälp för de nya kommandona.",
+ "note": "Jag förstår nu flera veckodagar, som måndagar och torsdagar kl 9, och säger tydligt till när något är återkommande.",
  "files": {
-  "index.html": "da1e447b36421f79805809e6fcd305b86bd153277837d98728a7c193c5bb6bf5",
+  "index.html": "ccc7918fece27858fb3161c9d416fe32bea730a5e03bc9a3021c84cbf50e8876",
   "popup.html": "7ab18625aa4ead744e1cf67ea7285ce618a901530a43e25e3b4f2ca15649c1b0",
   "build/icon.png": "7a1c43186a98bde4d4e1beb8cfe0595ac72845720665e4db9bf2ee7d2ace6305"
  },
@@ -11,6 +11,6 @@
   "version": "2.3.3",
   "url": "https://raw.githubusercontent.com/576F3154/jarvis/main/shell/Jarvis-2.3.3-portable.exe",
   "sha256": "f42589ff38aa68a5c51dba466380f89094065d6a6566ecf89ff46195e35b449f",
-  "note": "Papperskorg och dagliga säkerhetskopior, kontakter med telefonnummer som du ringer med ett klick, anteckningar på påminnelser, och jag påminner igen om du inte gör något. Skriv hjälp för de nya kommandona."
+  "note": "Jag förstår nu flera veckodagar, som måndagar och torsdagar kl 9, och säger tydligt till när något är återkommande."
  }
 }
